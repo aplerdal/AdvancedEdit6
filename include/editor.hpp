@@ -3,21 +3,27 @@
 #include <vector>
 #include <SDL3/SDL.h>
 #include <fstream>
+#include <list>
+#include "types.h"
 
 class Scene;
 
-typedef struct {
+typedef struct gameContext {
+    TrackTable* trackTable;
+} GameContext;
+
+typedef struct editorContext {
     SDL_AppResult app_result = SDL_APP_CONTINUE;
-    std::ifstream file;
-    std::vector<Scene*> active_scenes;
+    std::vector<uint8_t> file;
+    std::vector<Scene*> scenes;
 } EditorContext;
 
-typedef struct
-{
+typedef struct appState {
     SDL_Window *window;
     SDL_Renderer *renderer;
     Uint64 last_step;
     EditorContext editor_ctx;
+    GameContext game_ctx;
 } AppState;
 
 static const struct
@@ -33,9 +39,7 @@ static const struct
 };
 class Scene {
 public:
-    virtual ~Scene() = default;
-
-    virtual void init(AppState* as) = 0;
-    virtual void update(AppState* as, int id) = 0;
-    virtual void exit(AppState* as) = 0;
+    virtual void update(AppState* as) = 0;
+    virtual std::string get_name() = 0;
+    bool open;
 };

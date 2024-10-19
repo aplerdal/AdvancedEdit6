@@ -5,11 +5,14 @@
 #include "menubar.hpp"
 #include "tracklist.hpp"
 
-void MenuBar::init(AppState* as){
-
+std::string MenuBar::get_name(){
+    return "#MENUBAR";
 }
-void MenuBar::update(AppState* as, int id){
-    ImGui::PushID(id);
+
+void MenuBar::update(AppState* as){
+    if (demo_open) {
+        ImGui::ShowDemoWindow(&demo_open);
+    }
     if (ImGui::BeginMainMenuBar())
     {
         if (ImGui::BeginMenu("File"))
@@ -17,7 +20,7 @@ void MenuBar::update(AppState* as, int id){
             if (ImGui::MenuItem("Open ROM", "ctrl+o")) {
                 SDL_ShowOpenFileDialog(
                     OpenFileCallback, 
-                    &(as->editor_ctx.file), 
+                    as, 
                     as->window, 
                     gbaFileFilter, 
                     1, 
@@ -46,16 +49,17 @@ void MenuBar::update(AppState* as, int id){
         }
         if (ImGui::BeginMenu("Window"))
         {
-            if (ImGui::MenuItem("Track List")) as->editor_ctx.active_scenes.push_back(new TrackList);
+            for (auto o : as->editor_ctx.scenes){
+                if (o->get_name()[0] != '#'){
+                    ImGui::MenuItem(o->get_name().c_str(), NULL, &(o->open));
+                }
+            }
+            ImGui::MenuItem("Demo Window", NULL, &demo_open);
             ImGui::EndMenu();
         }
         
         ImGui::EndMainMenuBar();
     }
-    ImGui::PopID();
-}
-void MenuBar::exit(AppState* as){
-    return;
 }
 
 static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist, int filter){
@@ -68,5 +72,21 @@ static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist
         return;
     }
 
-    *((std::ifstream*)userdata) = std::ifstream(*filelist, std::ios::binary);
+
+    // Thanks to Loki Astari on stack exchange: https://codereview.stackexchange.com/questions/22901/reading-all-bytes-from-a-file
+    std::ifstream ifs(*filelist, std::ios::binary|std::ios::ate);
+    std::ifstream::pos_type pos = ifs.tellg();
+    AppState* as = (AppState*)userdata;
+    if (pos == 0){
+        as->editor_ctx.file = std::vector<uint8_t>{};
+        return;
+    }
+    std::vector<uint8_t> buf(pos);
+    ifs.seekg(0, std::ios::beg);
+    ifs.read((char*)&buf[0], pos);
+
+    as->editor_ctx.file = buf;
+
+    // Load Track stuff
+    as->game_ctx.trackTable = (TrackTable*)(&as->editor_ctx.file[0x258000]);
 }

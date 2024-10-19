@@ -11,9 +11,8 @@ static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist
 
 class MenuBar : public Scene {
 public:
-    void init(AppState* as) override;
-    void update(AppState* as, int id) override;
-    void exit(AppState* as) override;
+    void update(AppState* as) override;
+    std::string get_name() override;
 private:
-    
+    bool demo_open;
 };

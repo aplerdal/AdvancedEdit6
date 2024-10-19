@@ -81,9 +81,8 @@ static const char* tracksList[] = {
 
 class TrackList : public Scene {
 public:
-    void init(AppState* as) override;
-    void update(AppState* as, int id) override;
-    void exit(AppState* as) override;
+    void update(AppState* as) override;
+    std::string get_name() override;
 private:
     int _selected_track;
 };

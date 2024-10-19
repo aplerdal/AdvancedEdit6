@@ -3,7 +3,9 @@
 #include "backends/imgui_impl_sdlrenderer3.h"
 #include <iostream>
 #include "editor.hpp"
+
 #include "menubar.hpp"
+#include "tracklist.hpp"
 
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL.h>
@@ -32,7 +34,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     AppState *as = new AppState;
     *appstate = as;
 
-    as->editor_ctx.active_scenes.push_back(new MenuBar);
+    // Initialize scenes
+    as->editor_ctx.scenes = {
+        new MenuBar,
+        new TrackList,
+    };
 
     if (!SDL_CreateWindowAndRenderer("AdvancedEdit", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE, &as->window, &as->renderer)) {
         return SDL_APP_FAILURE;
@@ -83,11 +89,12 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     ImGui::NewFrame();
     // Imgui Window Code:
     ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
-    ImGui::ShowDemoWindow();
-    int j = 0;
-    for (Scene* i : as->editor_ctx.active_scenes){
-        i->update(as, j++);
+    
+    //
+    for (auto o : as->editor_ctx.scenes) {
+        o->update(as);
     }
+
     // End window code
 
     ImGui::Render();
@@ -108,7 +115,7 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     ImGui::DestroyContext();
     SDL_DestroyRenderer(as->renderer);
     SDL_DestroyWindow(as->window);
-    for (auto o : as->editor_ctx.active_scenes) {
+    for (auto o : as->editor_ctx.scenes) {
         delete o;
     }
     delete appstate;

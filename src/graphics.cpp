@@ -14,7 +14,7 @@ SDL_Surface* Graphics::decode_4bpp(char* data, palette16 pal)
     if (buf->pixels != NULL){
         std::memcpy(buf->pixels, &col_buf, sizeof(col_buf));
     }
-
+    return buf;
 }
 SDL_Surface* Graphics::decode_8bpp(char* data, palette256 pal)
 {

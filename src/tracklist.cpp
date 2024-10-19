@@ -3,18 +3,19 @@
 #include <SDL3/SDL.h>
 #include <string>
 
-void TrackList::init(AppState* as){
-
+std::string TrackList::get_name(){
+    return "Track List";
 }
-void TrackList::update(AppState* as, int id){
-    ImGui::PushID(id);
-    ImGui::Begin("Track List");
-    if (!as->editor_ctx.file.is_open()){
+
+void TrackList::update(AppState* as){
+    if (!open) return;
+    ImGui::Begin("Track List", &open);
+    if (as->editor_ctx.file.size() == 0){
         ImGui::Text("No file opened");
         ImGui::End();
-        ImGui::PopID();
         return;
     }
+    ImGui::Text(as->game_ctx.trackTable->date);
     int i = 0;
     for (int page = 0; page < pagesCount; page++){
         ImGui::PushID(page);
@@ -25,7 +26,7 @@ void TrackList::update(AppState* as, int id){
                     for (int track = 0; track < tracksCount/cupsCount; track++){
                         ImGui::PushID(track);
                         if (ImGui::Button(tracksList[track+(cup+page*(cupsCount/pagesCount))*tracksCount/cupsCount])) {
-                            // Open Track from id here
+                            // Load specific track.
                         }
                         ImGui::PopID();
                     }
@@ -37,10 +38,5 @@ void TrackList::update(AppState* as, int id){
         }
         ImGui::PopID();
     }
-
     ImGui::End();
-    ImGui::PopID();
-}
-void TrackList::exit(AppState* as){
-
 }

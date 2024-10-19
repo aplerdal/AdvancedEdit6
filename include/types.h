@@ -4,6 +4,10 @@
 // Contains several known types from mksc
 #pragma once
 
+#ifdef _cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -121,3 +125,7 @@ typedef struct{
     u8 y;
     u8 zone;
 } Object;
+
+#ifdef _cplusplus
+}
+#endif
