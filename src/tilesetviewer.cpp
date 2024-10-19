@@ -7,7 +7,7 @@ std::string TilesetViewer::get_name(){
 
 void TilesetViewer::update(AppState* as){
     if (!open) return;
-    ImGui::Begin("Track List", &open);
+    ImGui::Begin("Tileset View", &open);
     ImGui::End();
 }
 

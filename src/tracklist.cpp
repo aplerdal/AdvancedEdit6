@@ -15,7 +15,7 @@ void TrackList::update(AppState* as){
         ImGui::End();
         return;
     }
-    ImGui::Text(as->game_ctx.trackTable->date);
+    ImGui::Text(as->game_ctx.track_table->date);
     int i = 0;
     for (int page = 0; page < pagesCount; page++){
         ImGui::PushID(page);

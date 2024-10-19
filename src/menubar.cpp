@@ -4,6 +4,7 @@
 #include "editor.hpp"
 #include "menubar.hpp"
 #include "tracklist.hpp"
+#include "types.h"
 
 std::string MenuBar::get_name(){
     return "#MENUBAR";
@@ -88,5 +89,8 @@ static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist
     as->editor_ctx.file = buf;
 
     // Load Track stuff
-    as->game_ctx.trackTable = (TrackTable*)(&as->editor_ctx.file[0x258000]);
+    as->game_ctx.track_table = (TrackTable*)(&as->editor_ctx.file[0x258000]);
+    for (int i = 0; i < TRACK_COUNT; i++) {
+        as->game_ctx.track_headers[i] = (TrackHeader*)(&as->game_ctx.track_table + as->game_ctx.track_table->track_offsets[i]);
+    }
 }

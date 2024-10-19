@@ -3,13 +3,15 @@
 #include <vector>
 #include <SDL3/SDL.h>
 #include <fstream>
+#include <array>
 #include <list>
 #include "types.h"
 
 class Scene;
 
 typedef struct gameContext {
-    TrackTable* trackTable;
+    TrackTable* track_table;
+    std::array<TrackHeader*, TRACK_COUNT> track_headers;
 } GameContext;
 
 typedef struct editorContext {
