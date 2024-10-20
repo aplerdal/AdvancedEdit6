@@ -8,6 +8,20 @@
 #define cupsCount 12
 #define tracksCount 48
 
+static const int trackMapping[] = {
+     0, 1, 2, 3, // SNES    Mushroom
+     4, 5, 6, 7, //         Flower
+     8, 9,10,11, //         Lightning
+    12,13,14,15, //         Star
+    16,17,18,18, //         Special
+    20,21,22,23, //         Battle
+    24,25,29,27, // MKSC    Mushroom
+    32,37,38,31, //         Flower 
+    28,40,33,26, //         Lightning
+    36,34,30,35, //         Star
+    43,41,42,39, //         Special
+    44,45,46,47, //         Battle
+};
 static const char* pagesList[] = {
     "SNES Tracks",
     "MKSC Tracks"

@@ -29,7 +29,7 @@ void TrackList::update(AppState* as){
                     for (int track = 0; track < tracksCount/cupsCount; track++){
                         ImGui::PushID(track);
                         if (ImGui::Button(tracksList[track+(cup+page*(cupsCount/pagesCount))*tracksCount/cupsCount])) {
-                            load_gfx_buffer(as, track+(cup+page*(cupsCount/pagesCount))*tracksCount/cupsCount);
+                            load_gfx_buffer(as, trackMapping[track+(cup+page*(cupsCount/pagesCount))*tracksCount/cupsCount]);
                         }
                         ImGui::PopID();
                     }
@@ -45,14 +45,22 @@ void TrackList::update(AppState* as){
 }
 
 static void load_gfx_buffer(AppState* as, int track){
-    printf("ldgfx\n");
     as->editor_ctx.selected_track = track;
     TrackHeader* header = as->game_ctx.track_headers[track];
     uint8_t* base = (uint8_t*)header;
     std::vector<uint8_t> raw_tiles(4 * 0x1000);
     BGR* pal = (BGR*)(base + header->palette_offset);
     uint8_t* tile_header = (uint8_t*)(base + header->tileset_offset);
-    if (header->track_flags & TRACK_FLAGS_SPLIT_TILESET) {
+    uint32_t split_tileset = header->track_flags & TRACK_FLAGS_SPLIT_TILESET;
+    if (header->reused_tileset != 0){
+        int reused_track = track + (int8_t)header->reused_tileset;
+        printf("Reusing %s", tracksList[reused_track]);
+        TrackHeader* reused_header = as->game_ctx.track_headers[reused_track];
+        uint8_t* reused_base = (uint8_t*)reused_header;
+        tile_header = (uint8_t*)(reused_base + reused_header->tileset_offset);
+        split_tileset = reused_header->track_flags & TRACK_FLAGS_SPLIT_TILESET;
+    }
+    if (split_tileset) {
         for (int i = 0; i < 4; i++){
             if (((uint16_t*)tile_header)[i] != 0){
                 uint8_t* addr = (uint8_t*)(tile_header+((uint16_t*)tile_header)[i]);
@@ -66,6 +74,7 @@ static void load_gfx_buffer(AppState* as, int track){
         std::vector v = LZSS::Decode(data);
         std::copy(v.begin(), v.end(), raw_tiles.data());
     }
+
     for (int i = 0; i<0x4000/64; i++){
         SDL_Surface* surface = Graphics::decode_8bpp(&raw_tiles.data()[i*64],pal);
         if (as->editor_ctx.tile_buffer[i] != nullptr) {
