@@ -5,8 +5,8 @@
 #include "types.h"
 
 #define pagesCount 2
-#define cupsCount 10
-#define tracksCount 40
+#define cupsCount 12
+#define tracksCount 48
 
 static const char* pagesList[] = {
     "SNES Tracks",
@@ -19,12 +19,14 @@ static const char* cupsList[] = {
     "Lightning Cup",
     "Star Cup",
     "Special Cup",
+    "Battle",
 // MKSC
     "Mushroom Cup",
     "Flower Cup",
     "Lightning Cup",
     "Star Cup",
     "Special Cup",
+    "Battle",
 };
 static const char* tracksList[] = {
 // SNES Mushroom
@@ -52,6 +54,11 @@ static const char* tracksList[] = {
     "Ghost Valley 3",
     "Vanilla Lake 2",
     "Rainbow Road",
+// SNES Battle
+    "Battle Course 1",
+    "Battle Course 2",
+    "Battle Course 3",
+    "Battle Course 4",
 // Mushroom Cup
     "Peach Circuit",
     "Shy Guy Beach",
@@ -76,7 +83,12 @@ static const char* tracksList[] = {
     "Lakeside Park",
     "Broken Pier",
     "Bowser Castle 4",
-    "Rainbow Road"
+    "Rainbow Road",
+// Battle
+    "Battle Course 1",
+    "Battle Course 2",
+    "Battle Course 3",
+    "Battle Course 4",
 };
 
 class TrackList : public Scene {

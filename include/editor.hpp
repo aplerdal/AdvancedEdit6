@@ -10,12 +10,15 @@
 class Scene;
 
 typedef struct gameContext {
+    uint8_t* eof;
     TrackTable* track_table;
     std::array<TrackHeader*, TRACK_COUNT> track_headers;
 } GameContext;
 
 typedef struct editorContext {
     SDL_AppResult app_result = SDL_APP_CONTINUE;
+    int selected_track = -1;
+    std::array<SDL_Texture*,256> tile_buffer; 
     std::vector<uint8_t> file;
     std::vector<Scene*> scenes;
 } EditorContext;

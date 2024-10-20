@@ -6,7 +6,7 @@
 
 #include "menubar.hpp"
 #include "tracklist.hpp"
-#include "inspector.hpp"
+#include "tilesetviewer.hpp"
 
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL.h>
@@ -17,7 +17,6 @@
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 {
-
     if (!SDL_SetAppMetadata("Advanced Edit", "1.0", "dev.aplerdal.advancededit")) {
         return SDL_APP_FAILURE;
     }
@@ -39,7 +38,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     as->editor_ctx.scenes = {
         new MenuBar,
         new TrackList,
-        new Inspector,
+        new TilesetViewer
     };
 
     if (!SDL_CreateWindowAndRenderer("AdvancedEdit", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE, &as->window, &as->renderer)) {

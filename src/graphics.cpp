@@ -3,7 +3,7 @@
 #include "types.h"
 #include "graphics.hpp"
 
-SDL_Surface* Graphics::decode_4bpp(char* data, palette16 pal)
+SDL_Surface* Graphics::decode_4bpp(uint8_t* data, palette16 pal)
 {
     SDL_Surface* buf = SDL_CreateSurface(8,8, SDL_PIXELFORMAT_XBGR1555);
     BGR col_buf[64];
@@ -16,7 +16,7 @@ SDL_Surface* Graphics::decode_4bpp(char* data, palette16 pal)
     }
     return buf;
 }
-SDL_Surface* Graphics::decode_8bpp(char* data, palette256 pal)
+SDL_Surface* Graphics::decode_8bpp(uint8_t* data, palette256 pal)
 {
     SDL_Surface* buf = SDL_CreateSurface(8,8, SDL_PIXELFORMAT_XBGR1555);
     BGR col_buf[64];
@@ -27,8 +27,4 @@ SDL_Surface* Graphics::decode_8bpp(char* data, palette256 pal)
         std::memcpy(buf->pixels, &col_buf, sizeof(col_buf));
     }
     return buf;
-}
-SDL_Color Graphics::bgr_sdl(BGR col)
-{
-    return {(u8)(col.r<<3),(u8)(col.g<<3),(u8)(col.b<<3),0xff};
 }

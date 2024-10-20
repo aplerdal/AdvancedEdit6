@@ -43,24 +43,23 @@ typedef struct {
     char date[16];
 } TrackTable;
 
-typedef struct {
-    u8 b:5;
-    u8 g:5;
-    u8 r:5;
-    u8  :1;
-} BGR;
+typedef uint16_t BGR;
 
 typedef BGR palette256[256];
 typedef BGR palette16[16];
 typedef u8 track_behaviors[256];
 
 
+#define TRACK_FLAGS_SPLIT_TILESET (1 << 0)
+#define TRACK_FLAGS_SPLIT_LAYOUT  (1 << 1)
+#define TRACK_FLAGS_SPLIT_OBJECTS (1 << 2)
+
 typedef struct{ /*0x100*/
     //Offset
     /*0x00*/ u8 magic;
     /*0x01*/ b8 compressed_tileset;
     /*0x02*/ u8 padding1;
-    /*0x03*/ u8 track_flags; // Flags are mostly unknown at the moment.
+    /*0x03*/ u8 track_flags;
     /*0x04*/ u8 width; // These could be the wrong way around
     /*0x05*/ u8 height;
     /*0x06*/ u8 padding2[2+40];

@@ -8,8 +8,13 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O2")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+if (MSVC)
+  set(CMAKE_CXX_FLAGS_DEBUG "/DEBUG")
+  set(CMAKE_CXX_FLAGS_RELEASE "/O2")
+else()
+  set(CMAKE_CXX_FLAGS_DEBUG "-g")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+endif()
 
 # Include SDL3 headers and link prebuilt libraries
 add_library(SDL3 STATIC IMPORTED)

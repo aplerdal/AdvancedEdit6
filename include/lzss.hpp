@@ -5,6 +5,6 @@
 
 class LZSS{
 public:
-    std::vector<uint8_t> Decode(std::span<const uint8_t> data);
-    std::vector<uint8_t> Encode(std::vector<const uint8_t> data);
+    static std::vector<uint8_t> Decode(std::span<const uint8_t> data);
+    static std::vector<uint8_t> Encode(std::vector<const uint8_t> data);
 };
