@@ -16,7 +16,7 @@ std::string Map::get_name(){
 
 void Map::update(AppState* as){
     if (!open) return;
-    ImGui::Begin("Map", &open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::Begin("Map", &open, ImGuiWindowFlags_NoScrollbar);
     if (!as->editor_ctx.file_open || as->editor_ctx.selected_track < 0) {
         ImGui::Text("No Track Loaded");
         ImGui::End();
@@ -32,12 +32,35 @@ void Map::update(AppState* as){
             win_size.y/track_size.y + img_translation_uvs.y
         );
         ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(win_size.x,win_size.y),img_translation_uvs,img_uvs);
+        ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY);
+        
         // Handle Image input
         if (ImGui::IsItemHovered()){
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)){
                 dragging = true;
                 drag_pos = ImGui::GetMousePos();
                 drag_map_pos = translation;
+            }
+            // WHY DOES THIS NOT READ CORRECTLY AHHHHHHHHHHHHH
+            float scroll = ImGui::GetIO().MouseWheel;
+            if (fabs(scroll) > 0.01f){
+                printf("%f\n",scroll);
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+
+                drag_pos = mouse_pos;
+                drag_map_pos = translation;
+                ImVec2 mouse_in_image = ImVec2(
+                    (mouse_pos.x - ImGui::GetWindowPos().x) / (track_size.x * zoom),
+                    (mouse_pos.y - ImGui::GetWindowPos().y) / (track_size.y * zoom)
+                );
+                float zoom_change = 1.1f;  // Zoom factor (adjust for smoother/faster zoom)
+                if (scroll > 0.0f) {
+                    zoom *= scroll*zoom_change;
+                } else if (scroll < 0.0f) {
+                    zoom /= scroll*zoom_change;
+                }
+                translation.x = mouse_in_image.x * track_size.x * zoom - (mouse_pos.x - ImGui::GetWindowPos().x);
+                translation.y = mouse_in_image.y * track_size.y * zoom - (mouse_pos.y - ImGui::GetWindowPos().y);
             }
         }
         if (dragging && !ImGui::IsMouseDown(ImGuiMouseButton_Middle)){
@@ -46,10 +69,6 @@ void Map::update(AppState* as){
         if (dragging){
             ImVec2 mouse_pos = ImGui::GetMousePos();
             translation = ImVec2(drag_map_pos.x+(drag_pos.x-mouse_pos.x), drag_map_pos.y+(drag_pos.y-mouse_pos.y));
-        }
-        float scroll = ImGui::GetIO().MouseWheel;
-        if (scroll != 0){
-            
         }
     } else {
         ImGui::TextColored(ImVec4(1.0f,0.25f,0.25f,1.0f), "Error Reading Map Image!");
