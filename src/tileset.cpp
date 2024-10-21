@@ -6,13 +6,10 @@
 #include <span>
 #include "lzss.hpp"
 
+
 std::string Tileset::get_name(){
     return "Tileset";
 }
-
-#define TILESET_SIZE 16
-#define TILE_DISP_SIZE 16
-#define TILE_SIZE 8
 
 void Tileset::update(AppState* as){
     if (!open) return;
@@ -28,6 +25,7 @@ void Tileset::update(AppState* as){
         return;
     }
     ImVec2 pos = ImGui::GetCursorPos();
+    float tile_offset = 0;
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
     for (int y = 0; y < TILESET_SIZE; y++){
         ImGui::PushID(y);
@@ -35,14 +33,14 @@ void Tileset::update(AppState* as){
             ImGui::PushID(x);
             ImGui::SetCursorPos(ImVec2(pos.x+TILE_DISP_SIZE*x, pos.y+TILE_DISP_SIZE*y));
             ImVec2 hvr_pos = ImGui::GetCursorScreenPos();
-            int tile_offset = ((float)(x*TILE_SIZE) / 256);
-            if (ImGui::ImageButton("tileset", (ImTextureID)(intptr_t)tex, ImVec2(TILE_DISP_SIZE,TILE_DISP_SIZE), ImVec2(tile_offset,0), ImVec2(tile_offset+TILE_SIZE,1))){
+            if (ImGui::ImageButton("tileset", (ImTextureID)(intptr_t)tex, ImVec2(TILE_DISP_SIZE,TILE_DISP_SIZE), ImVec2(tile_offset,0), ImVec2(tile_offset+((float)TILE_SIZE/(256*8)),1))){
                 as->editor_ctx.selected_tile = x + y*16;
             }
+            tile_offset += ((float)TILE_SIZE/(256*8));
             if (ImGui::IsItemHovered()){
                 ImGui::GetForegroundDrawList()->AddRect(
                     ImVec2(hvr_pos.x-2,hvr_pos.y-2),
-                    ImVec2(hvr_pos.x+TILE_SIZE+2,hvr_pos.y+TILE_SIZE+2),
+                    ImVec2(hvr_pos.x+TILE_DISP_SIZE+2,hvr_pos.y+TILE_DISP_SIZE+2),
                     ImGui::GetColorU32(ImGuiCol_ButtonHovered),
                     0.0f,
                     0,
@@ -52,7 +50,7 @@ void Tileset::update(AppState* as){
             if (x + y*16 == as->editor_ctx.selected_tile) {
                 ImGui::GetForegroundDrawList()->AddRect(
                     ImVec2(hvr_pos.x-2,hvr_pos.y-2),
-                    ImVec2(hvr_pos.x+TILE_SIZE+2,hvr_pos.y+TILE_SIZE+2),
+                    ImVec2(hvr_pos.x+TILE_DISP_SIZE+2,hvr_pos.y+TILE_DISP_SIZE+2),
                     ImGui::GetColorU32(ImGuiCol_ButtonActive),
                     0.0f,
                     0,
@@ -102,15 +100,15 @@ void Tileset::generate_cache(AppState* as, int track){
         SDL_Surface* temp = Graphics::decode_8bpp(&raw_tiles.data()[i*64],pal);
         SDL_Rect dest = { i*TILE_SIZE, 0, TILE_SIZE, TILE_SIZE };
         SDL_BlitSurface(temp, NULL, buf_surface, &dest);
-        SDL_DestroySurface(buf_surface);
+        SDL_DestroySurface(temp);
     }
     if (as->editor_ctx.tile_buffer != nullptr) {
         SDL_DestroyTexture(as->editor_ctx.tile_buffer);
     }
     as->editor_ctx.tile_buffer = SDL_CreateTextureFromSurface(as->renderer, buf_surface);
-    SDL_SetTextureScaleMode(as->editor_ctx.tile_buffer, SDL_SCALEMODE_NEAREST);
     if (!as->editor_ctx.tile_buffer) {
         printf("Failed to create texture from surface for tileset: %s\n", SDL_GetError());
     }
+    SDL_SetTextureScaleMode(as->editor_ctx.tile_buffer, SDL_SCALEMODE_NEAREST);
     SDL_DestroySurface(buf_surface);
 }

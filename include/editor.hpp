@@ -11,6 +11,7 @@ class Scene;
 
 typedef struct gameContext {
     uint8_t* eof;
+    int track_width, track_height;
     TrackTable* track_table;
     std::array<TrackDefinition*, TRACK_COUNT> definition_table;
     std::array<TrackHeader*, TRACK_COUNT> track_headers;
