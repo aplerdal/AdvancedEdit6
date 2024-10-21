@@ -42,3 +42,5 @@ add_executable(AdvancedEdit ${SOURCES})
 target_include_directories(AdvancedEdit PUBLIC include)
 # Link libraries
 target_link_libraries(AdvancedEdit SDL3 imgui)
+
+# Include savestate files

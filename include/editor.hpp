@@ -12,15 +12,21 @@ class Scene;
 typedef struct gameContext {
     uint8_t* eof;
     TrackTable* track_table;
+    std::array<TrackDefinition*, TRACK_COUNT> definition_table;
     std::array<TrackHeader*, TRACK_COUNT> track_headers;
 } GameContext;
 
 typedef struct editorContext {
     SDL_AppResult app_result = SDL_APP_CONTINUE;
     int selected_track = -1;
-    std::array<SDL_Texture*,256> tile_buffer; 
+    int selected_tile = -1;
     std::vector<uint8_t> file;
+    bool file_open = false;
     std::vector<Scene*> scenes;
+
+    std::array<SDL_Texture*,256> tile_buffer; 
+    SDL_Texture* map_buffer;
+    std::vector<uint8_t> layout_buffer;
 } EditorContext;
 
 typedef struct appState {

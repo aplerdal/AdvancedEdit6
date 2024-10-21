@@ -6,7 +6,8 @@
 
 #include "menubar.hpp"
 #include "tracklist.hpp"
-#include "tilesetviewer.hpp"
+#include "tileset.hpp"
+#include "map.hpp"
 
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL.h>
@@ -38,7 +39,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     as->editor_ctx.scenes = {
         new MenuBar,
         new TrackList,
-        new TilesetViewer
+        new Tileset,
+        new Map,
     };
 
     if (!SDL_CreateWindowAndRenderer("AdvancedEdit", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE, &as->window, &as->renderer)) {

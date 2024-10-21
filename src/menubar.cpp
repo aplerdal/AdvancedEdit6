@@ -58,7 +58,9 @@ void MenuBar::update(AppState* as){
             ImGui::MenuItem("Demo Window", NULL, &demo_open);
             ImGui::EndMenu();
         }
-        
+        if (ImGui::BeginMenu("Run")){
+            ImGui::EndMenu();
+        }
         ImGui::EndMainMenuBar();
     }
 }
@@ -87,15 +89,15 @@ static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist
     ifs.read((char*)&buf[0], pos);
 
     as->editor_ctx.file = buf;
+    #pragma message ("WARNING: No checks to validate input file. Can result in memory corruption on invalid files.")
+    as->editor_ctx.file_open = true;
 
-    // Load Track stuff
-    //printf("ROM: %p\n", as->editor_ctx.file.data());
-    as->game_ctx.track_table = (TrackTable*)(&as->editor_ctx.file.data()[0x258000]);
-    //printf("Track Table: %p\n", as->game_ctx.track_table);
+    // Load Track pointers
+    as->game_ctx.track_table = (TrackTable*)(&as->editor_ctx.file.data()[TRACK_TABLE_ADDRESS]);
+
     as->game_ctx.eof = as->editor_ctx.file.data() + as->editor_ctx.file.size();
     for (int i = 0; i < TRACK_COUNT; i++) {
         as->game_ctx.track_headers[i] = (TrackHeader*)((uint8_t*)as->game_ctx.track_table + as->game_ctx.track_table->track_offsets[i]);
-        as->editor_ctx.tile_buffer[i] = nullptr;
-        //printf("Track Header %d: %p\n",i, as->game_ctx.track_headers[i]);
+        as->game_ctx.definition_table[i] = (TrackDefinition*)(&as->editor_ctx.file.data()[DEFINITION_TABLE_ADDRESS+i*sizeof(TrackDefinition)]);
     }
 }

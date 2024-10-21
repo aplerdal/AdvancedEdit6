@@ -2,9 +2,11 @@
 #include "imgui.h"
 #include "lzss.hpp"
 #include "graphics.hpp"
+#include "tileset.hpp"
 #include <SDL3/SDL.h>
 #include <string>
 #include <algorithm>
+#include "map.hpp"
 
 std::string TrackList::get_name(){
     return "Track List";
@@ -13,7 +15,7 @@ static void load_gfx_buffer(AppState* as, int track);
 void TrackList::update(AppState* as){
     if (!open) return;
     ImGui::Begin("Track List", &open);
-    if (as->editor_ctx.file.size() == 0){
+    if (!as->editor_ctx.file_open){
         ImGui::Text("No file opened");
         ImGui::End();
         return;
@@ -46,45 +48,6 @@ void TrackList::update(AppState* as){
 
 static void load_gfx_buffer(AppState* as, int track){
     as->editor_ctx.selected_track = track;
-    TrackHeader* header = as->game_ctx.track_headers[track];
-    uint8_t* base = (uint8_t*)header;
-    std::vector<uint8_t> raw_tiles(4 * 0x1000);
-    BGR* pal = (BGR*)(base + header->palette_offset);
-    uint8_t* tile_header = (uint8_t*)(base + header->tileset_offset);
-    uint32_t split_tileset = header->track_flags & TRACK_FLAGS_SPLIT_TILESET;
-    if (header->reused_tileset != 0){
-        int reused_track = track + (int8_t)header->reused_tileset;
-        printf("Reusing %s", tracksList[reused_track]);
-        TrackHeader* reused_header = as->game_ctx.track_headers[reused_track];
-        uint8_t* reused_base = (uint8_t*)reused_header;
-        tile_header = (uint8_t*)(reused_base + reused_header->tileset_offset);
-        split_tileset = reused_header->track_flags & TRACK_FLAGS_SPLIT_TILESET;
-    }
-    if (split_tileset) {
-        for (int i = 0; i < 4; i++){
-            if (((uint16_t*)tile_header)[i] != 0){
-                uint8_t* addr = (uint8_t*)(tile_header+((uint16_t*)tile_header)[i]);
-                std::span<uint8_t> data(addr, (uintptr_t)as->game_ctx.eof - (uintptr_t)addr);
-                std::vector v = LZSS::Decode(data);
-                std::copy(v.begin(), v.end(), &(raw_tiles.data()[i*0x1000]));
-            }
-        }
-    } else {
-        std::span<uint8_t> data(tile_header, as->game_ctx.eof - tile_header);
-        std::vector v = LZSS::Decode(data);
-        std::copy(v.begin(), v.end(), raw_tiles.data());
-    }
-
-    for (int i = 0; i<0x4000/64; i++){
-        SDL_Surface* surface = Graphics::decode_8bpp(&raw_tiles.data()[i*64],pal);
-        if (as->editor_ctx.tile_buffer[i] != nullptr) {
-            SDL_DestroyTexture(as->editor_ctx.tile_buffer[i]);
-        }
-        as->editor_ctx.tile_buffer[i] = SDL_CreateTextureFromSurface(as->renderer, surface);
-        SDL_SetTextureScaleMode(as->editor_ctx.tile_buffer[i], SDL_SCALEMODE_NEAREST);
-        if (!as->editor_ctx.tile_buffer[i]) {
-            printf("Failed to create texture from surface for tile %d: %s\n", i, SDL_GetError());
-        }
-        SDL_DestroySurface(surface);
-    }
+    Tileset::generate_cache(as, track);
+    Map::generate_cache(as, track);
 }
