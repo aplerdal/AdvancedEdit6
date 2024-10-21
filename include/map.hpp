@@ -13,4 +13,9 @@ public:
     std::string get_name() override;
 private:
     float zoom = 1.0f;
+    ImVec2 translation = ImVec2(0.000000001f,0.000000001f);
+
+    bool dragging;
+    ImVec2 drag_map_pos;
+    ImVec2 drag_pos;
 };

@@ -22,12 +22,35 @@ void Map::update(AppState* as){
         ImGui::End();
         return;
     }
-    float test_zoom = 1.0f;
     if (as->editor_ctx.map_buffer != nullptr) {
         ImGui::SetCursorScreenPos(ImGui::GetWindowPos());
         ImVec2 win_size = ImGui::GetWindowSize();
-        ImVec2 img_uvs = ImVec2(win_size.x/(as->game_ctx.track_width*TILE_SIZE*test_zoom), win_size.y/(as->game_ctx.track_width*TILE_SIZE*test_zoom));
-        ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(win_size.x,win_size.y),ImVec2(0,0),img_uvs);
+        ImVec2 track_size = ImVec2((as->game_ctx.track_width*TILE_SIZE*zoom), (as->game_ctx.track_height*TILE_SIZE*zoom));
+        ImVec2 img_translation_uvs = ImVec2(translation.x/track_size.x, translation.y/track_size.y);
+        ImVec2 img_uvs = ImVec2(
+            win_size.x/track_size.x + img_translation_uvs.x,
+            win_size.y/track_size.y + img_translation_uvs.y
+        );
+        ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(win_size.x,win_size.y),img_translation_uvs,img_uvs);
+        // Handle Image input
+        if (ImGui::IsItemHovered()){
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)){
+                dragging = true;
+                drag_pos = ImGui::GetMousePos();
+                drag_map_pos = translation;
+            }
+        }
+        if (dragging && !ImGui::IsMouseDown(ImGuiMouseButton_Middle)){
+            dragging = false;
+        }
+        if (dragging){
+            ImVec2 mouse_pos = ImGui::GetMousePos();
+            translation = ImVec2(drag_map_pos.x+(drag_pos.x-mouse_pos.x), drag_map_pos.y+(drag_pos.y-mouse_pos.y));
+        }
+        float scroll = ImGui::GetIO().MouseWheel;
+        if (scroll != 0){
+            
+        }
     } else {
         ImGui::TextColored(ImVec4(1.0f,0.25f,0.25f,1.0f), "Error Reading Map Image!");
     }
