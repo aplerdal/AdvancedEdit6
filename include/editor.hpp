@@ -24,7 +24,7 @@ typedef struct editorContext {
     bool file_open = false;
     std::vector<Scene*> scenes;
 
-    std::array<SDL_Texture*,256> tile_buffer; 
+    SDL_Texture* tile_buffer;
     SDL_Texture* map_buffer;
     std::vector<uint8_t> layout_buffer;
 } EditorContext;
