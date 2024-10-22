@@ -145,7 +145,8 @@ void Map::generate_cache(AppState* as, int track) {
     SDL_Texture* tiles = as->editor_ctx.tile_buffer;
     for (int y = 0; y < track_height; y++) {
         for (int x = 0; x < track_width; x++) {
-            src = { (float)(TILE_SIZE*layout_buffer[y*track_height + x]), 0, TILE_SIZE, TILE_SIZE };
+            int tile = layout_buffer[y*track_height + x];
+            src = { (float)(TILE_SIZE*(tile%16)), (float)(TILE_SIZE*(tile/16)), TILE_SIZE, TILE_SIZE };
             SDL_RenderTexture(as->renderer, tiles, &src, &dest);
             dest.x += TILE_SIZE;
         }

@@ -24,7 +24,7 @@ void MenuBar::update(AppState* as){
                     as, 
                     as->window, 
                     gbaFileFilter, 
-                    1, 
+                    2, 
                     NULL, 
                     false
                 );
@@ -80,8 +80,10 @@ static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist
     std::ifstream ifs(*filelist, std::ios::binary|std::ios::ate);
     std::ifstream::pos_type pos = ifs.tellg();
     AppState* as = (AppState*)userdata;
-    if (pos == 0){
-        as->editor_ctx.file = std::vector<uint8_t>{};
+    if (pos < 0x400000) {
+        ImGui::BeginPopup("ERROR");
+        ImGui::Text("Error reading file: Incorrect file size! Did you open the correct file?");
+        ImGui::EndPopup();
         return;
     }
     std::vector<uint8_t> buf(pos);
@@ -89,7 +91,6 @@ static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist
     ifs.read((char*)&buf[0], pos);
 
     as->editor_ctx.file = buf;
-    #pragma message ("WARNING: No checks to validate input file. Can result in memory corruption on invalid files.")
     as->editor_ctx.file_open = true;
 
     // Load Track pointers
