@@ -4,7 +4,7 @@
 #include "graphics.hpp"
 #include <vector>
 #include <span>
-#include "lzss.hpp"
+#include "gbalzss.hpp"
 
 
 std::string Tileset::get_name(){
@@ -90,13 +90,13 @@ void Tileset::generate_cache(AppState* as, int track){
             if (((uint16_t*)tile_header)[i] != 0){
                 uint8_t* addr = (uint8_t*)(tile_header+((uint16_t*)tile_header)[i]);
                 std::span<uint8_t> data(addr, (uintptr_t)as->game_ctx.eof - (uintptr_t)addr);
-                std::vector v = LZSS::Decode(data);
+                std::vector v = lzss::lz10_decode(data,true);
                 std::copy(v.begin(), v.end(), &(raw_tiles.data()[i*0x1000]));
             }
         }
     } else {
         std::span<uint8_t> data(tile_header, as->game_ctx.eof - tile_header);
-        std::vector v = LZSS::Decode(data);
+        std::vector v = lzss::lz10_decode(data,true);
         std::copy(v.begin(), v.end(), raw_tiles.data());
     }
 

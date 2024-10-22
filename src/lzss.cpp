@@ -1,4 +1,4 @@
-#include "lzss.hpp"
+#include "gbalzss.hpp"
 #include <vector>
 #include <span>
 #include <stdexcept>

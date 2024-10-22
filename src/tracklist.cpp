@@ -1,6 +1,6 @@
 #include "tracklist.hpp"
 #include "imgui.h"
-#include "lzss.hpp"
+#include "gbalzss.hpp"
 #include "graphics.hpp"
 #include "tileset.hpp"
 #include <SDL3/SDL.h>

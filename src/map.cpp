@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <span>
-#include "lzss.hpp"
+#include "gbalzss.hpp"
 #include "imgui.h"
 #include "editor.hpp"
 #include "tileset.hpp"
@@ -136,13 +136,13 @@ void Map::generate_cache(AppState* as, int track) {
             if (((uint16_t*)layout)[i] != 0){
                 uint8_t* addr = (uint8_t*)(layout+((uint16_t*)layout)[i]);
                 std::span<uint8_t> data(addr, (uintptr_t)as->game_ctx.eof - (uintptr_t)addr);
-                std::vector v = LZSS::Decode(data);
+                std::vector v = lzss::lz10_decode(data,true);
                 std::copy(v.begin(), v.end(), &(layout_buffer.data()[i*0x1000]));
             }
         }
     } else {
         std::span<uint8_t> data(layout, (uintptr_t)as->game_ctx.eof - (uintptr_t)layout);
-        std::vector v = LZSS::Decode(data);
+        std::vector v = lzss::lz10_decode(data,true);
         std::copy(v.begin(), v.end(), layout_buffer.data());
     }
     as->editor_ctx.layout_buffer = layout_buffer;
