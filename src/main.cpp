@@ -49,7 +49,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -71,6 +71,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
     AppState* as = (AppState*)appstate;
     ImGui_ImplSDL3_ProcessEvent(event);
+    if (event->type == SDL_EVENT_MOUSE_WHEEL)
+        as->editor_ctx.scroll_wheel = event->wheel.y;
     if (event->type == SDL_EVENT_QUIT)
         return SDL_APP_SUCCESS;
     if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event->window.windowID == SDL_GetWindowID(as->window))
@@ -104,6 +106,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     SDL_RenderClear(as->renderer);
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), as->renderer);
     SDL_RenderPresent(as->renderer);
+
+    as->editor_ctx.scroll_wheel = 0;
 
     return as->editor_ctx.app_result;
 }

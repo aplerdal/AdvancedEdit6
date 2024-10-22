@@ -18,6 +18,8 @@ typedef struct gameContext {
 } GameContext;
 
 typedef struct editorContext {
+    float scroll_wheel;
+
     SDL_AppResult app_result = SDL_APP_CONTINUE;
     int selected_track = -1;
     int selected_tile = -1;

@@ -16,51 +16,40 @@ std::string Map::get_name(){
 
 void Map::update(AppState* as){
     if (!open) return;
-    ImGui::Begin("Map", &open, ImGuiWindowFlags_NoScrollbar);
+    ImGui::Begin("Map", &open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     if (!as->editor_ctx.file_open || as->editor_ctx.selected_track < 0) {
         ImGui::Text("No Track Loaded");
         ImGui::End();
         return;
     }
     if (as->editor_ctx.map_buffer != nullptr) {
-        ImGui::SetCursorScreenPos(ImGui::GetWindowPos());
+        ImVec2 win_pos = ImGui::GetWindowPos();
         ImVec2 win_size = ImGui::GetWindowSize();
-        ImVec2 track_size = ImVec2((as->game_ctx.track_width*TILE_SIZE*zoom), (as->game_ctx.track_height*TILE_SIZE*zoom));
-        ImVec2 img_translation_uvs = ImVec2(translation.x/track_size.x, translation.y/track_size.y);
-        ImVec2 img_uvs = ImVec2(
-            win_size.x/track_size.x + img_translation_uvs.x,
-            win_size.y/track_size.y + img_translation_uvs.y
-        );
-        ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(win_size.x,win_size.y),img_translation_uvs,img_uvs);
-        ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY);
+        ImVec2 cursor_pos = ImVec2(win_pos.x + translation.x, win_pos.y + translation.y);
+        ImVec2 track_size = ImVec2((as->game_ctx.track_width*TILE_SIZE*scale), (as->game_ctx.track_height*TILE_SIZE*scale));
+        ImGui::SetCursorScreenPos(cursor_pos);
+        ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(track_size.x,track_size.y));
         
-        // Handle Image input
+        // Handle Input
+        ImVec2 mouse_pos = ImGui::GetMousePos();
         if (ImGui::IsItemHovered()){
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)){
                 dragging = true;
-                drag_pos = ImGui::GetMousePos();
-                drag_map_pos = translation;
-            }
-            // WHY DOES THIS NOT READ CORRECTLY AHHHHHHHHHHHHH
-            float scroll = ImGui::GetIO().MouseWheel;
-            if (fabs(scroll) > 0.01f){
-                printf("%f\n",scroll);
-                ImVec2 mouse_pos = ImGui::GetMousePos();
-
                 drag_pos = mouse_pos;
                 drag_map_pos = translation;
-                ImVec2 mouse_in_image = ImVec2(
-                    (mouse_pos.x - ImGui::GetWindowPos().x) / (track_size.x * zoom),
-                    (mouse_pos.y - ImGui::GetWindowPos().y) / (track_size.y * zoom)
-                );
-                float zoom_change = 1.1f;  // Zoom factor (adjust for smoother/faster zoom)
-                if (scroll > 0.0f) {
-                    zoom *= scroll*zoom_change;
-                } else if (scroll < 0.0f) {
-                    zoom /= scroll*zoom_change;
+            }
+            if (as->editor_ctx.scroll_wheel != 0.0f){
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+                ImVec2 relative_mouse_pos = ImVec2(mouse_pos.x - cursor_pos.x, mouse_pos.y - cursor_pos.y);
+                float zoom_factor = 1.1f;
+                if (as->editor_ctx.scroll_wheel > 0) {
+                    scale *= zoom_factor;
+                } else {
+                    scale /= zoom_factor;
                 }
-                translation.x = mouse_in_image.x * track_size.x * zoom - (mouse_pos.x - ImGui::GetWindowPos().x);
-                translation.y = mouse_in_image.y * track_size.y * zoom - (mouse_pos.y - ImGui::GetWindowPos().y);
+                ImVec2 new_track_size = ImVec2(as->game_ctx.track_width * TILE_SIZE * scale, as->game_ctx.track_height * TILE_SIZE * scale);
+                translation.x += (relative_mouse_pos.x - (relative_mouse_pos.x * (new_track_size.x / track_size.x)));
+                translation.y += (relative_mouse_pos.y - (relative_mouse_pos.y * (new_track_size.y / track_size.y)));
             }
         }
         if (dragging && !ImGui::IsMouseDown(ImGuiMouseButton_Middle)){
@@ -68,7 +57,7 @@ void Map::update(AppState* as){
         }
         if (dragging){
             ImVec2 mouse_pos = ImGui::GetMousePos();
-            translation = ImVec2(drag_map_pos.x+(drag_pos.x-mouse_pos.x), drag_map_pos.y+(drag_pos.y-mouse_pos.y));
+            translation = ImVec2(drag_map_pos.x-(drag_pos.x-mouse_pos.x), drag_map_pos.y-(drag_pos.y-mouse_pos.y));
         }
     } else {
         ImGui::TextColored(ImVec4(1.0f,0.25f,0.25f,1.0f), "Error Reading Map Image!");
@@ -125,6 +114,7 @@ void Map::generate_cache(AppState* as, int track) {
             TILE_SIZE*track_height
         );
     }
+    SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_NEAREST);
 
 
     SDL_SetRenderTarget(as->renderer, as->editor_ctx.map_buffer);

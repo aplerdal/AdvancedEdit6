@@ -12,8 +12,8 @@ public:
     static void generate_cache(AppState* as, int track);
     std::string get_name() override;
 private:
-    float zoom = 1.0f;
-    ImVec2 translation = ImVec2(0.000000001f,0.000000001f);
+    float scale = 1.0f;
+    ImVec2 translation = ImVec2(0.0f,0.0f);
 
     bool dragging;
     ImVec2 drag_map_pos;
