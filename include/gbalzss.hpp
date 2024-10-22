@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <span>
 #include <stdint.h>
 
 /** @brief LZSS maximum encodable size */
@@ -31,13 +32,13 @@ enum LZSS_t
 };
 
 /** @brief Buffer object */
-typedef std::vector<uint8_t> Buffer;
+typedef std::span<uint8_t> Buffer;
 
 class LZSS {
 public:
-    Buffer lz10_encode(const Buffer &source, bool vram);
-    Buffer lz11_encode(const Buffer &source, bool vram);
-    Buffer lz10_decode(const Buffer &source, bool vram);
-    Buffer lz11_decode(const Buffer &source, bool vram);
+    static std::vector<uint8_t> lz10_encode(const Buffer &source, bool vram);
+    static std::vector<uint8_t> lz11_encode(const Buffer &source, bool vram);
+    static std::vector<uint8_t> lz10_decode(const Buffer &source, bool vram);
+    static std::vector<uint8_t> lz11_decode(const Buffer &source, bool vram);
 private:
 };

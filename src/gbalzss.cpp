@@ -31,11 +31,10 @@
 #include <cstring>
 #include <stdexcept>
 #include <vector>
-#include <getopt.h>
-#include <libgen.h>
 #include <cstddef>
 #include "gbalzss.hpp"
 
+#pragma warning(disable:4267)
 /** @brief Find last instance of a byte in a buffer
  *  @param[in] first Beginning of buffer
  *  @param[in] last  End of buffer
@@ -144,7 +143,7 @@ find_best_match(const Buffer &source, Buffer::const_iterator it, size_t len,
  *  @param[in]  size   Uncompressed data size
  */
 void
-header(Buffer &buffer, uint8_t type, size_t size)
+header(std::vector<uint8_t> &buffer, uint8_t type, size_t size)
 {
   buffer.push_back(type);
   buffer.push_back(size >>  0);
@@ -158,7 +157,7 @@ header(Buffer &buffer, uint8_t type, size_t size)
  *  @param[in] vram   VRAM-safe
  *  @returns Compressed buffer
  */
-Buffer
+std::vector<uint8_t>
 lzss_encode(const Buffer &source, LZSS_t mode, bool vram)
 {
   // get maximum match length
@@ -170,7 +169,7 @@ lzss_encode(const Buffer &source, LZSS_t mode, bool vram)
   assert(mode == LZ10 || mode == LZ11);
 
   // create output buffer
-  Buffer result;
+  std::vector<uint8_t> result;
 
   // append compression header
   header(result, mode, source.size());
@@ -339,7 +338,7 @@ lzss_encode(const Buffer &source, LZSS_t mode, bool vram)
  *  @param[in] vram   VRAM-safe
  *  @returns Compressed buffer
  */
-Buffer
+std::vector<uint8_t>
 LZSS::lz10_encode(const Buffer &source, bool vram)
 {
   return lzss_encode(source, LZ10, vram);
@@ -350,7 +349,7 @@ LZSS::lz10_encode(const Buffer &source, bool vram)
  *  @param[in] vram   VRAM-safe
  *  @returns Compressed buffer
  */
-Buffer
+std::vector<uint8_t>
 LZSS::lz11_encode(const Buffer &source, bool vram)
 {
   return lzss_encode(source, LZ11, vram);
@@ -361,7 +360,7 @@ LZSS::lz11_encode(const Buffer &source, bool vram)
  *  @param[in] vram   VRAM-safe
  *  @returns Decompressed buffer
  */
-Buffer
+std::vector<uint8_t>
 LZSS::lz10_decode(const Buffer &source, bool vram)
 {
   if(source.size() < 4 || source[0] != LZ10)
@@ -376,7 +375,7 @@ LZSS::lz10_decode(const Buffer &source, bool vram)
   uint8_t flags = 0;
   uint8_t mask  = 0;
 
-  Buffer result;
+  std::vector<uint8_t> result;
 
   while(size > 0)
   {
@@ -450,7 +449,7 @@ LZSS::lz10_decode(const Buffer &source, bool vram)
  *  @param[in] vram   VRAM-safe
  *  @returns Decompressed buffer
  */
-Buffer
+std::vector<uint8_t>
 lz11_decode(const Buffer &source, bool vram)
 {
   if(source.size() < 4 || source[0] != LZ11)
@@ -465,7 +464,7 @@ lz11_decode(const Buffer &source, bool vram)
   uint8_t flags = 0;
   uint8_t mask  = 0;
 
-  Buffer result;
+  std::vector<uint8_t> result;
 
   while(size > 0)
   {
@@ -553,3 +552,4 @@ lz11_decode(const Buffer &source, bool vram)
 
   return result;
 }
+#pragma warning(default:4267)
