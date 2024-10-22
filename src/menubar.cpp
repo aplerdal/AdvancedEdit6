@@ -92,7 +92,7 @@ static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist
 
     as->editor_ctx.file = buf;
     as->editor_ctx.file_open = true;
-
+    ifs.close();
     // Load Track pointers
     as->game_ctx.track_table = (TrackTable*)(&as->editor_ctx.file.data()[TRACK_TABLE_ADDRESS]);
 

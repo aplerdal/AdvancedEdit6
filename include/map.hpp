@@ -10,6 +10,7 @@ class Map : public Scene {
 public:
     void update(AppState* as) override;
     static void generate_cache(AppState* as, int track);
+    static void draw_tile(AppState* as, int x, int y, int tile);
     std::string get_name() override;
 private:
     float scale = 1.0f;

@@ -19,12 +19,12 @@ typedef struct gameContext {
 
 typedef struct editorContext {
     float scroll_wheel;
-
     SDL_AppResult app_result = SDL_APP_CONTINUE;
     int selected_track = -1;
     int selected_tile = -1;
     std::vector<uint8_t> file;
     bool file_open = false;
+    std::string file_name;
     std::vector<Scene*> scenes;
 
     SDL_Texture* tile_buffer;

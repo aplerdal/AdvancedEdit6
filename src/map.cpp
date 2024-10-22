@@ -46,16 +46,41 @@ void Map::update(AppState* as){
     ImVec2 win_size = ImGui::GetWindowSize();
     ImVec2 cursor_pos = ImVec2(win_pos.x + translation.x, win_pos.y + translation.y);
     ImVec2 track_size = ImVec2((as->game_ctx.track_width*TILE_SIZE*scale), (as->game_ctx.track_height*TILE_SIZE*scale));
-    ImGui::SetCursorScreenPos(cursor_pos);
     if (scale < 1.0f) 
         SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_LINEAR);
     else
         SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_NEAREST);
+    ImGui::SetCursorScreenPos(cursor_pos);
     ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(track_size.x,track_size.y));
     
     // Handle Image Input
     ImVec2 mouse_pos = ImGui::GetMousePos();
     if (ImGui::IsItemHovered()){
+        ImVec2 hovered_tile = ImVec2(
+            (float)(int)((mouse_pos.x-cursor_pos.x)/(TILE_SIZE*scale)),
+            (float)(int)((mouse_pos.y-cursor_pos.y)/(TILE_SIZE*scale))
+        );
+        ImVec2 abs_hovered_tile = ImVec2(
+            cursor_pos.x + hovered_tile.x*(TILE_SIZE*scale),
+            cursor_pos.y + hovered_tile.y*(TILE_SIZE*scale)
+        );
+        if (as->editor_ctx.selected_tile > -1) {
+            int tile = as->editor_ctx.selected_tile;
+            int tile_x = tile%16;
+            int tile_y = tile/16;
+            if (ImGui::IsMouseDown(ImGuiMouseButton_Left)){
+                Map::draw_tile(as, (int)hovered_tile.x, (int)hovered_tile.y, tile);
+                as->editor_ctx.layout_buffer[(int)hovered_tile.y*TILEMAP_UNIT*as->game_ctx.track_width + (int)hovered_tile.x] = (uint8_t)tile;
+            }
+            ImVec2 tile_atlas_pos = ImVec2(tile_x*(1.0f/16), tile_y*(1.0f/16));
+            ImGui::SetCursorScreenPos(abs_hovered_tile);
+            ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.tile_buffer,ImVec2((TILE_SIZE*scale),(TILE_SIZE*scale)), 
+                tile_atlas_pos,
+                ImVec2(tile_atlas_pos.x + (1.0f/16), tile_atlas_pos.y + (1.0f/16))
+            );
+        }
+        
+        
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)){
             dragging = true;
             drag_pos = mouse_pos;
@@ -82,7 +107,17 @@ void Map::update(AppState* as){
         ImVec2 mouse_pos = ImGui::GetMousePos();
         translation = ImVec2(drag_map_pos.x-(drag_pos.x-mouse_pos.x), drag_map_pos.y-(drag_pos.y-mouse_pos.y));
     }
+
     ImGui::End();
+}
+
+void Map::draw_tile(AppState* as, int x, int y, int tile){
+    SDL_SetRenderTarget(as->renderer, as->editor_ctx.map_buffer);
+    SDL_FRect src = { (float)(TILE_SIZE*(tile%16)), (float)(TILE_SIZE*(tile/16)), TILE_SIZE, TILE_SIZE };
+    SDL_FRect dest = {(float)x*TILE_SIZE,(float)y*TILE_SIZE, TILE_SIZE, TILE_SIZE};
+    SDL_RenderTexture(as->renderer, as->editor_ctx.tile_buffer, &src, &dest);
+
+    SDL_SetRenderTarget(as->renderer, NULL);
 }
 
 void Map::generate_cache(AppState* as, int track) {
