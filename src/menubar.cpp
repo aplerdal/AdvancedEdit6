@@ -11,8 +11,8 @@ std::string MenuBar::get_name(){
 }
 
 void MenuBar::update(AppState* as){
-    if (demo_open) {
-        ImGui::ShowDemoWindow(&demo_open);
+    if (debug_open) {
+        ImGui::ShowMetricsWindow(&debug_open);
     }
     if (ImGui::BeginMainMenuBar())
     {
@@ -55,7 +55,7 @@ void MenuBar::update(AppState* as){
                     ImGui::MenuItem(o->get_name().c_str(), NULL, &(o->open));
                 }
             }
-            ImGui::MenuItem("Demo Window", NULL, &demo_open);
+            ImGui::MenuItem("Debug Window", NULL, &debug_open);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Run")){

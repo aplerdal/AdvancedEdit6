@@ -14,5 +14,5 @@ public:
     void update(AppState* as) override;
     std::string get_name() override;
 private:
-    bool demo_open;
+    bool debug_open;
 };

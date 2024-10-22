@@ -55,5 +55,5 @@ class Scene {
 public:
     virtual void update(AppState* as) = 0;
     virtual std::string get_name() = 0;
-    bool open;
+    bool open = true;
 };
