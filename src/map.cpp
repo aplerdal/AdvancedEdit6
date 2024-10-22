@@ -70,7 +70,7 @@ void Map::update(AppState* as){
             int tile_y = tile/16;
             if (ImGui::IsMouseDown(ImGuiMouseButton_Left)){
                 Map::draw_tile(as, (int)hovered_tile.x, (int)hovered_tile.y, tile);
-                as->editor_ctx.layout_buffer[(int)hovered_tile.y*TILEMAP_UNIT*as->game_ctx.track_width + (int)hovered_tile.x] = (uint8_t)tile;
+                as->editor_ctx.layout_buffer[(int)hovered_tile.y*as->game_ctx.track_width + (int)hovered_tile.x] = (uint8_t)tile;
             }
             ImVec2 tile_atlas_pos = ImVec2(tile_x*(1.0f/16), tile_y*(1.0f/16));
             ImGui::SetCursorScreenPos(abs_hovered_tile);
@@ -130,7 +130,7 @@ void Map::generate_cache(AppState* as, int track) {
     as->game_ctx.track_width = track_width;
     as->game_ctx.track_height = track_height;
 
-    std::vector<uint8_t> layout_buffer(16 * 0x1000);
+    std::vector<uint8_t> layout_buffer(track_width*track_height);
     if (header->track_flags & TRACK_FLAGS_SPLIT_LAYOUT) {
         for (int i = 0; i < 16; i++) {
             if (((uint16_t*)layout)[i] != 0){

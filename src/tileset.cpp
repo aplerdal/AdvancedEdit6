@@ -75,7 +75,7 @@ void Tileset::generate_cache(AppState* as, int track){
     uint8_t* base = (uint8_t*)header;
 
     std::vector<uint8_t> raw_tiles(4 * 0x1000);
-    BGR* pal = (BGR*)(base + header->palette_offset);
+    BGR* tile_pal = (BGR*)(base + header->palette_offset);
     uint8_t* tile_header = (uint8_t*)(base + header->tileset_offset);
     uint32_t split_tileset = header->track_flags & TRACK_FLAGS_SPLIT_TILESET;
     if (header->reused_tileset != 0){
@@ -99,11 +99,23 @@ void Tileset::generate_cache(AppState* as, int track){
         std::vector v = LZSS::lz10_decode(data,true);
         std::copy(v.begin(), v.end(), raw_tiles.data());
     }
+    SDL_Palette* palette = SDL_CreatePalette(256);
+    SDL_Color pal_buf[256];
+    for (int i = 0; i < 256; i++) {
+        pal_buf[i] = SDL_Color{
+            (uint8_t)((tile_pal[i]<<3)&0b11111000),
+            (uint8_t)((tile_pal[i]>>2)&0b11111000),
+            (uint8_t)((tile_pal[i]>>7)&0b11111000),
+            0xff
+        };
+    }
+    SDL_SetPaletteColors(palette, pal_buf, 0, 256);
 
-    SDL_Surface* buf_surface = SDL_CreateSurface(16*TILE_SIZE, 16*TILE_SIZE, SDL_PIXELFORMAT_XBGR1555);
+    SDL_Surface* buf_surface = SDL_CreateSurface(16*TILE_SIZE, 16*TILE_SIZE, SDL_PIXELFORMAT_INDEX8);
+    SDL_SetSurfacePalette(buf_surface, palette);
     for (int y = 0; y<16; y++){
         for (int x = 0; x<16; x++){
-            SDL_Surface* temp = Graphics::decode_8bpp(&raw_tiles.data()[(y*16+x)*64],pal);
+            SDL_Surface* temp = Graphics::decode_8bpp(&raw_tiles.data()[(y*16+x)*64],palette);
             SDL_Rect dest = { x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE };
             SDL_BlitSurface(temp, NULL, buf_surface, &dest);
             SDL_DestroySurface(temp);
