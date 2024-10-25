@@ -7,6 +7,17 @@
 #include <list>
 #include "types.h"
 
+class Command;
+
+typedef struct _vec2i {
+    int x;
+    int y;
+} vec2i;
+typedef struct _vec2{
+    float x;
+    float y;
+} vec2;
+
 class Scene;
 
 typedef struct gameContext {
@@ -27,6 +38,9 @@ typedef struct editorContext {
     std::string file_name;
     std::vector<Scene*> scenes;
 
+    std::list<Command*> undo_list;
+
+    SDL_Palette* palette;
     SDL_Texture* tile_buffer;
     SDL_Texture* map_buffer;
     std::vector<uint8_t> layout_buffer;
@@ -56,4 +70,10 @@ public:
     virtual void update(AppState* as) = 0;
     virtual std::string get_name() = 0;
     bool open = true;
+};
+
+class Command {
+    virtual void execute(AppState* as) = 0;
+    virtual void redo(AppState* as)= 0;
+    virtual void undo(AppState* as)= 0;
 };

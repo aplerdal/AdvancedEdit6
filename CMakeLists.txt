@@ -39,8 +39,7 @@ target_link_libraries(imgui PUBLIC SDL3)
 # Define executable
 file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 add_executable(AdvancedEdit ${SOURCES})
+
 target_include_directories(AdvancedEdit PUBLIC include)
 # Link libraries
 target_link_libraries(AdvancedEdit SDL3 imgui)
-
-# Include savestate files

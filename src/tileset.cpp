@@ -110,6 +110,10 @@ void Tileset::generate_cache(AppState* as, int track){
         };
     }
     SDL_SetPaletteColors(palette, pal_buf, 0, 256);
+    //if (as->editor_ctx.palette != nullptr){
+    //    SDL_DestroyPalette(as->editor_ctx.palette);
+    //}
+    as->editor_ctx.palette = palette;
 
     SDL_Surface* buf_surface = SDL_CreateSurface(16*TILE_SIZE, 16*TILE_SIZE, SDL_PIXELFORMAT_INDEX8);
     SDL_SetSurfacePalette(buf_surface, palette);
