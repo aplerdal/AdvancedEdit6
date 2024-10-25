@@ -6,6 +6,7 @@ A work-in-progress, cross platform track/graphics editor for Mario Kart: Super C
 - [ ] Editing tilesets
 - [ ] Editing AI
 - [ ] Saving modified game
+- [ ] Quick track testing using savestates.
 - [x] Techical documentation ([Mksc RE](https://github.com/aplerdal/MkscRE))
 ## Building
 The linux build instructions are not fully tested, but should work.
