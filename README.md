@@ -13,15 +13,15 @@ Mksc Hacking Discord: [https://discord.gg/C6dNp2EvGy](https://discord.gg/C6dNp2E
 - [x] Techical documentation ([Mksc RE](https://github.com/aplerdal/MkscRE))
 ## Building
 The linux build instructions are not fully tested, but should work.
-### Windows
-#### Dependecies
-Make sure you have MSVC installed. It can be obtained by downloading visual studio and including `c/c++ Development Tools`.
 
 Clone or download this repositiory into a local directory including submodules using 
 ```
 git clone --recurse-submodules https://github.com/aplerdal/AdvancedEdit6.git
 ```
-
+and then follow the build steps for your platform.
+### Windows
+#### Dependecies
+Make sure you have MSVC installed. It can be obtained by downloading visual studio and including `c/c++ Development Tools`.
 Then, to install sdl, visit their releases page: [https://github.com/libsdl-org/SDL/releases](https://github.com/libsdl-org/SDL/releases) and install SDL3-devel-3.X.X-VC.zip and extract it into `AdvancedEdit6/SDL`
 #### Building
 To build, run
@@ -32,3 +32,13 @@ cmake ..
 cmake --build .
 ```
 And if there are no errors the result should be in `build/Debug/`.
+### Linux
+#### Dependencies
+You must have g++ and SDL3-dev installed.
+#### Building
+```sh
+mkdir build
+cd build
+cmake ..
+cmake --build
+```
