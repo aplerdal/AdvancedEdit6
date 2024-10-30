@@ -18,6 +18,7 @@ public:
     Tilemap();
     void update(AppState* as) override;
     void undo(AppState* as);
+    void redo(AppState* as);
     static void generate_cache(AppState* as, int track);
     static void draw_tile(AppState* as, int x, int y, int tile);
     static void regen_map_texture(AppState* as);

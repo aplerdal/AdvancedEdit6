@@ -6,7 +6,7 @@
 #include <SDL3/SDL.h>
 #include <string>
 #include <algorithm>
-#include "map.hpp"
+#include "tilemap.hpp"
 
 std::string TrackList::get_name(){
     return "Track List";

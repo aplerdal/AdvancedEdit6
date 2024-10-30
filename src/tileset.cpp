@@ -40,7 +40,6 @@ void Tileset::update(AppState* as){
         );
         if (ImGui::IsItemClicked()){
             as->editor_ctx.selected_tile = (int)hvr_tile.x + (int)hvr_tile.y*16;
-            printf("%d\n", as->editor_ctx.selected_tile);
         }
         ImGui::GetForegroundDrawList()->AddRect(
             ImVec2(abs_hvr_tile.x-2,abs_hvr_tile.y-2),
@@ -130,7 +129,7 @@ void Tileset::generate_cache(AppState* as, int track){
     }
     as->editor_ctx.tile_buffer = SDL_CreateTextureFromSurface(as->renderer, buf_surface);
     if (!as->editor_ctx.tile_buffer) {
-        printf("Failed to create texture from surface for tileset: %s\n", SDL_GetError());
+        ImGui::DebugLog("ERROR: Failed to create texture from surface for tileset: %s\n", SDL_GetError());
     }
     SDL_SetTextureScaleMode(as->editor_ctx.tile_buffer, SDL_SCALEMODE_NEAREST);
     SDL_DestroySurface(buf_surface);

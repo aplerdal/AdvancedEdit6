@@ -4,11 +4,19 @@
 #include <SDL3/SDL.h>
 #include <fstream>
 #include <array>
+#include <deque>
 #include <list>
 #include <stack>
 #include "types.h"
 
 class Command;
+
+inline void PUSH_STACK(std::deque<Command*>& queue, Command* value) {
+    queue.push_back(value);
+    if (queue.size()>32){
+        queue.pop_front();
+    }
+}
 
 typedef struct _vec2i vec2i;
 
@@ -55,7 +63,8 @@ typedef struct editorContext {
     std::string file_name;
     std::vector<Scene*> scenes;
 
-    std::stack<Command*> undo_stack;
+    std::deque<Command*> undo_stack;
+    std::deque<Command*> redo_stack;
 
     SDL_Palette* palette;
     SDL_Texture* tile_buffer;

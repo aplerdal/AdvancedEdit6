@@ -1,4 +1,4 @@
-#include "map.hpp"
+#include "tilemap.hpp"
 
 #include <SDL3/SDL.h>
 #include <string>
@@ -51,6 +51,7 @@ void Tilemap::update(AppState* as){
                 undo(as);
             }
             if (ImGui::MenuItem("Redo", "ctrl+y")){
+                redo(as);
             }
             ImGui::EndMenu();
         }
@@ -81,15 +82,32 @@ void Tilemap::update(AppState* as){
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) {
         undo(as);
     }
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y)) {
+        redo(as);
+    }
     
     ImGui::End();
 }
 void Tilemap::undo(AppState *as)
 {
     if (as->editor_ctx.undo_stack.size() > 0) {
-        as->editor_ctx.undo_stack.top()->undo(as);
-        delete as->editor_ctx.undo_stack.top();
-        as->editor_ctx.undo_stack.pop();
+        as->editor_ctx.undo_stack.back()->undo(as);
+        as->editor_ctx.redo_stack.push_back(as->editor_ctx.undo_stack.back());
+        as->editor_ctx.undo_stack.pop_back();
+    }
+    if (as->editor_ctx.undo_stack.size() > 32) {
+        as->editor_ctx.undo_stack.pop_front();
+    }
+}
+void Tilemap::redo(AppState *as)
+{
+    if (as->editor_ctx.redo_stack.size() > 0) {
+        as->editor_ctx.redo_stack.back()->redo(as);
+        as->editor_ctx.undo_stack.push_back(as->editor_ctx.redo_stack.back());
+        as->editor_ctx.redo_stack.pop_back();
+    }
+    if (as->editor_ctx.redo_stack.size() > 32) {
+        as->editor_ctx.redo_stack.pop_front();
     }
 }
 void Tilemap::draw_tile(AppState *as, int x, int y, int tile)
@@ -144,7 +162,6 @@ void Tilemap::regen_map_texture(AppState* as){
                 TILE_SIZE*track_width, 
                 TILE_SIZE*track_height
             );
-            printf("Resized map texture");
         }
     } else {
         as->editor_ctx.map_buffer = SDL_CreateTexture(
@@ -209,7 +226,6 @@ void ViewTool::update(AppState *as, MapState& ms)
 }
 
 DrawCmd::DrawCmd(AppState* as, TileBuffer tile_buf){
-    printf("Tilebuf size:%zd\n", tile_buf.size());
     new_tiles = tile_buf;
     old_tiles = TileBuffer();
     for (auto const& [pos,tile] : new_tiles) {
@@ -229,7 +245,7 @@ void DrawCmd::redo(AppState* as) {
 }
 void DrawCmd::undo(AppState* as) {
     SDL_SetRenderTarget(as->renderer, as->editor_ctx.map_buffer);
-    std::cout << old_tiles.size();
+
     for (auto const& [pos,tile] : old_tiles) {
         SDL_FRect src = { (float)(TILE_SIZE*(tile%16)), (float)(TILE_SIZE*(tile/16)), TILE_SIZE, TILE_SIZE };
         SDL_FRect dest = { (float)pos.x*TILE_SIZE,(float)pos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE };
@@ -266,7 +282,10 @@ void DrawTool::update(AppState *as, MapState& ms)
             {
                 held = false;
                 auto cmd = new DrawCmd(as, draw_buf);
-                as->editor_ctx.undo_stack.push(cmd);
+
+                PUSH_STACK(as->editor_ctx.undo_stack, cmd);
+                as->editor_ctx.redo_stack = std::deque<Command*>();
+                
                 draw_buf = TileBuffer();
                 
                 cmd->execute(as);
