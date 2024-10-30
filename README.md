@@ -1,4 +1,6 @@
 # Advanced Edit 6
+[![Build](https://github.com/aplerdal/AdvancedEdit6/actions/workflows/build-win.yml/badge.svg)](https://github.com/aplerdal/AdvancedEdit6/actions/workflows/build-win.yml)
+
 A work-in-progress, cross platform track/graphics editor for Mario Kart: Super Circuit.
 
 Mksc Hacking Discord: [https://discord.gg/C6dNp2EvGy](https://discord.gg/C6dNp2EvGy)
