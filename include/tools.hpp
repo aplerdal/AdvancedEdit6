@@ -2,6 +2,7 @@
 
 #include "imgui.h"
 #include "editor.hpp"
+#include <unordered_map>
 
 typedef struct map_state{
     ImVec2 win_pos; 
@@ -21,27 +22,27 @@ class TilePickerCommand : public Tool {
     TilePickerCommand(vec2i position);
 };
 
-typedef struct tile_pos {
-    int x;
-    int y;
-    uint8_t tile;
-} TilePos;
+typedef std::unordered_map<vec2i, uint8_t> TileBuffer;
+
 class DrawCmd : public Command {
 public:
-    DrawCmd(AppState* as, std::vector<TilePos> tile_buf);
+    DrawCmd(AppState* as, TileBuffer tile_buf);
     void execute(AppState* as) override;
     void redo(AppState* as) override;
     void undo(AppState* as) override;
 private:
-    std::vector<TilePos> old_tiles;
-    std::vector<TilePos> new_tiles;
+    TileBuffer old_tiles;
+    TileBuffer new_tiles;
+
+    SDL_FRect src;
+    SDL_FRect dst;
 };
 class DrawTool : public Tool {
 public:
     void update(AppState* as, MapState& ms) override;
 private:
     bool held;
-    std::vector<TilePos> draw_buf;
+    TileBuffer draw_buf;
 };
 
 class BucketTool : public Tool {

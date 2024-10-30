@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.31)
 project(AdvancedEdit)
 
 # Set C++ standard
@@ -17,11 +17,9 @@ else()
 endif()
 
 # Include SDL3 headers and link prebuilt libraries
-add_library(SDL3 STATIC IMPORTED)
-set_target_properties(SDL3 PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/libs/SDL3/lib/x64/SDL3.lib"
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/libs/SDL3/include"
-)
+list(APPEND CMAKE_PREFIX_PATH "SDL3/cmake/")
+
+find_package(SDL3 REQUIRED)
 
 # Add ImGui
 add_library(imgui STATIC
@@ -34,7 +32,7 @@ add_library(imgui STATIC
     external/imgui/backends/imgui_impl_sdlrenderer3.cpp
 )
 target_include_directories(imgui PUBLIC external/imgui)
-target_link_libraries(imgui PUBLIC SDL3)
+target_link_libraries(imgui PRIVATE SDL3::SDL3)
 
 # Define executable
 file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
@@ -42,4 +40,12 @@ add_executable(AdvancedEdit ${SOURCES})
 
 target_include_directories(AdvancedEdit PUBLIC include)
 # Link libraries
-target_link_libraries(AdvancedEdit SDL3 imgui)
+target_link_libraries(AdvancedEdit PRIVATE SDL3::SDL3 imgui)
+
+if(WIN32)
+    add_custom_command(
+        TARGET AdvancedEdit POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:SDL3::SDL3-shared> $<TARGET_FILE_DIR:AdvancedEdit>
+        VERBATIM
+    )
+endif()

@@ -5,14 +5,31 @@
 #include <fstream>
 #include <array>
 #include <list>
+#include <stack>
 #include "types.h"
 
 class Command;
 
+typedef struct _vec2i vec2i;
+
 typedef struct _vec2i {
-    int x;
-    int y;
+    int32_t x, y;
+
+    bool operator==(const vec2i& v) const {
+        return x == v.x && y == v.y;
+    }
 } vec2i;
+
+namespace std {
+    template <>
+    struct hash<vec2i> {
+        std::size_t operator()(const vec2i& v) const {
+            // Combine x and y into a single hash value
+            return std::hash<uint64_t>()(static_cast<uint64_t>(v.x) << 32) | (static_cast<uint32_t>(v.y));
+        }
+    };
+}
+
 typedef struct _vec2{
     float x;
     float y;
@@ -38,7 +55,7 @@ typedef struct editorContext {
     std::string file_name;
     std::vector<Scene*> scenes;
 
-    std::list<Command*> undo_list;
+    std::stack<Command*> undo_stack;
 
     SDL_Palette* palette;
     SDL_Texture* tile_buffer;
@@ -73,6 +90,7 @@ public:
 };
 
 class Command {
+public:
     virtual void execute(AppState* as) = 0;
     virtual void redo(AppState* as)= 0;
     virtual void undo(AppState* as)= 0;

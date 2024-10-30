@@ -10,6 +10,8 @@
 #include "tileset.hpp"
 #include "tools.hpp"
 
+#include <chrono>
+#include <iostream>
 
 std::string Map::get_name(){
     return "Map";
@@ -44,10 +46,22 @@ void Map::update(AppState* as){
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("edit")){
+            if (ImGui::MenuItem("Undo", "ctrl+z")){
+                undo(as);
+            }
+            if (ImGui::MenuItem("Redo", "ctrl+y")){
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Debug")){
+            if (ImGui::MenuItem("Regen Buffer")){
+                Map::regen_map_texture(as);
+            }
+            ImGui::EndMenu();
+        }
         ImGui::EndMenuBar();
     }
-    
-
     // Draw Track Image
     state.win_pos = ImGui::GetWindowPos();
     state.win_size = ImGui::GetWindowSize();
@@ -64,10 +78,22 @@ void Map::update(AppState* as){
     view->update(as, state);
     active_tool->update(as, state);
 
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) {
+        undo(as);
+    }
     
     ImGui::End();
 }
-void Map::draw_tile(AppState* as, int x, int y, int tile){
+void Map::undo(AppState *as)
+{
+    if (as->editor_ctx.undo_stack.size() > 0) {
+        as->editor_ctx.undo_stack.top()->undo(as);
+        delete as->editor_ctx.undo_stack.top();
+        as->editor_ctx.undo_stack.pop();
+    }
+}
+void Map::draw_tile(AppState *as, int x, int y, int tile)
+{
     SDL_SetRenderTarget(as->renderer, as->editor_ctx.map_buffer);
     SDL_FRect src = { (float)(TILE_SIZE*(tile%16)), (float)(TILE_SIZE*(tile/16)), TILE_SIZE, TILE_SIZE };
     SDL_FRect dest = {(float)x*TILE_SIZE,(float)y*TILE_SIZE, TILE_SIZE, TILE_SIZE};
@@ -101,7 +127,11 @@ void Map::generate_cache(AppState* as, int track) {
         std::copy(v.begin(), v.end(), layout_buffer.data());
     }
     as->editor_ctx.layout_buffer = layout_buffer;
-
+    regen_map_texture(as);
+}
+void Map::regen_map_texture(AppState* as){
+    int track_width = as->game_ctx.track_width;
+    int track_height = as->game_ctx.track_height;
     if (as->editor_ctx.map_buffer != nullptr){
         float w, h;
         SDL_GetTextureSize(as->editor_ctx.map_buffer, &w, &h);
@@ -135,7 +165,7 @@ void Map::generate_cache(AppState* as, int track) {
     SDL_Texture* tiles = as->editor_ctx.tile_buffer;
     for (int y = 0; y < track_height; y++) {
         for (int x = 0; x < track_width; x++) {
-            int tile = layout_buffer[y*track_height + x];
+            int tile = as->editor_ctx.layout_buffer[y*track_height + x];
             src = { (float)(TILE_SIZE*(tile%16)), (float)(TILE_SIZE*(tile/16)), TILE_SIZE, TILE_SIZE };
             SDL_RenderTexture(as->renderer, tiles, &src, &dest);
             dest.x += TILE_SIZE;
@@ -178,29 +208,37 @@ void ViewTool::update(AppState *as, MapState& ms)
     }
 }
 
-DrawCmd::DrawCmd(AppState* as, std::vector<TilePos> tile_buf){
+DrawCmd::DrawCmd(AppState* as, TileBuffer tile_buf){
+    printf("Tilebuf size:%zd\n", tile_buf.size());
     new_tiles = tile_buf;
-    old_tiles = std::vector<TilePos>(new_tiles.size());
-    for (int i = 0; i<new_tiles.size(); i++) {
-        old_tiles[i] = {new_tiles[i].x,new_tiles[i].y,as->editor_ctx.layout_buffer[new_tiles[i].y*as->game_ctx.track_width + new_tiles[i].x]};
+    old_tiles = TileBuffer();
+    for (auto const& [pos,tile] : new_tiles) {
+        old_tiles[pos] = as->editor_ctx.layout_buffer[pos.y*as->game_ctx.track_width + pos.x];
     }
 }
 void DrawCmd::execute(AppState* as) {
-    for (auto t:new_tiles) {
-        as->editor_ctx.layout_buffer[t.y*as->game_ctx.track_width + t.x] = t.tile;
+    for (auto const& [pos,tile] : new_tiles) {
+        as->editor_ctx.layout_buffer[pos.y*as->game_ctx.track_width + pos.x] = tile;
     }
 }
 void DrawCmd::redo(AppState* as) {
-    for (auto t:new_tiles) {
-        Map::draw_tile(as, t.x, t.y, t.tile);
-        as->editor_ctx.layout_buffer[t.y*as->game_ctx.track_width + t.x] = t.tile;
+    for (auto const& [pos,tile] : new_tiles) {
+        Map::draw_tile(as, pos.x, pos.y, tile);
+        as->editor_ctx.layout_buffer[pos.y*as->game_ctx.track_width + pos.x] = tile;
     }
 }
 void DrawCmd::undo(AppState* as) {
-    for (auto t:old_tiles) {
-        Map::draw_tile(as, t.x, t.y, t.tile);
-        as->editor_ctx.layout_buffer[t.y*as->game_ctx.track_width + t.x] = t.tile;
+    SDL_SetRenderTarget(as->renderer, as->editor_ctx.map_buffer);
+    std::cout << old_tiles.size();
+    for (auto const& [pos,tile] : old_tiles) {
+        SDL_FRect src = { (float)(TILE_SIZE*(tile%16)), (float)(TILE_SIZE*(tile/16)), TILE_SIZE, TILE_SIZE };
+        SDL_FRect dest = { (float)pos.x*TILE_SIZE,(float)pos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE };
+        SDL_RenderTexture(as->renderer, as->editor_ctx.tile_buffer, &src, &dest);
+        as->editor_ctx.layout_buffer[pos.y*as->game_ctx.track_width + pos.x] = tile;
     }
+    
+    SDL_SetRenderTarget(as->renderer, NULL);
+    //Map::generate_cache(as, as->editor_ctx.selected_track);
 }
 
 void DrawTool::update(AppState *as, MapState& ms)
@@ -219,16 +257,18 @@ void DrawTool::update(AppState *as, MapState& ms)
             int tile = as->editor_ctx.selected_tile;
             vec2i tile_pos = { tile%16, tile/16 };
             if (ImGui::IsMouseDown(ImGuiMouseButton_Left)){
+                if (!draw_buf.contains({hovered_tile.x, hovered_tile.y})) {
+                    Map::draw_tile(as, hovered_tile.x, hovered_tile.y, tile);
+                    draw_buf.insert(std::pair<vec2i, uint8_t>({hovered_tile.x, hovered_tile.y}, tile));
+                }
                 held = true;
-                Map::draw_tile(as, hovered_tile.x, hovered_tile.y, tile);
-                draw_buf.push_back({hovered_tile.x,hovered_tile.y, (uint8_t)tile});
             } else if (held)
             {
                 held = false;
                 auto cmd = new DrawCmd(as, draw_buf);
-                as->editor_ctx.undo_list.push_back(cmd);
-                if (as->editor_ctx.undo_list.size() > UNDO_HISTORY_SIZE)
-                    as->editor_ctx.undo_list.pop_front();
+                as->editor_ctx.undo_stack.push(cmd);
+                draw_buf = TileBuffer();
+                
                 cmd->execute(as);
             }
             
