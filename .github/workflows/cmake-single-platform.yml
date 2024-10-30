@@ -40,12 +40,8 @@ jobs:
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
     
-    - name: Get Commit Hash
-      id: hash
-      run: echo "git_hash=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_HASH
-    
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.4.3
       with:
-        name: AdvancedEdit-dev-${{ env.hash }}.zip
+        name: AdvancedEdit-dev-${{ github.sha }}.zip
         path: ${{github.workspace}}/build/${{env.BUILD_TYPE}}
