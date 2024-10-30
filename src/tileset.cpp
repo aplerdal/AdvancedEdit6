@@ -72,7 +72,7 @@ void Tileset::update(AppState* as){
 }
 
 void Tileset::generate_cache(AppState* as, int track){
-    TrackHeader* header = as->game_ctx.track_headers[track];
+    TrackHeader* header = as->game_ctx.tracks[track].track_header;
     uint8_t* base = (uint8_t*)header;
 
     std::vector<uint8_t> raw_tiles(4 * 0x1000);
@@ -81,7 +81,7 @@ void Tileset::generate_cache(AppState* as, int track){
     uint32_t split_tileset = header->track_flags & TRACK_FLAGS_SPLIT_TILESET;
     if (header->reused_tileset != 0){
         int reused_track = (int)(uint8_t)((uint8_t)track + (uint8_t)header->reused_tileset);
-        TrackHeader* reused_header = as->game_ctx.track_headers[reused_track];
+        TrackHeader* reused_header = as->game_ctx.tracks[reused_track].track_header;
         uint8_t* reused_base = (uint8_t*)reused_header;
         tile_header = (uint8_t*)(reused_base + reused_header->tileset_offset);
         split_tileset = reused_header->track_flags & TRACK_FLAGS_SPLIT_TILESET;

@@ -85,7 +85,8 @@ typedef TrackDefinition* DefinitionTable[TRACK_COUNT];
 #define TRACK_FLAGS_SPLIT_LAYOUT  (1 << 1)
 #define TRACK_FLAGS_SPLIT_OBJECTS (1 << 2)
 
-typedef struct{ /*0x100*/
+#pragma pack(1)
+typedef struct TrackHeader{ /*0x100*/
     //Offset
     /*0x00*/ u8 magic;
     /*0x01*/ b8 compressed_tileset;
@@ -106,7 +107,7 @@ typedef struct{ /*0x100*/
     /*0x94*/ o32 item_boxes_offset;
     /*0x98*/ o32 finish_line_offset;
     /*0x9C*/ u32 unk1;
-    /*0xA0*/ u8 padding5[8];
+    /*0xA0*/ u8 padding5[4];
     /*0xA8*/ u8 battle_unk1[28];
     /*0xC4*/ u32 track_routine;
     /*0xC8*/ o32 minimap_offset;

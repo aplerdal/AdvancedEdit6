@@ -18,8 +18,14 @@ endif()
 
 # Include SDL3 headers and link prebuilt libraries
 list(APPEND CMAKE_PREFIX_PATH "SDL3/cmake/")
-
-find_package(SDL3 REQUIRED)
+if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
+  set(USE_FLAGS "-s USE_SDL=3")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USE_FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USE_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${USE_FLAGS}")
+else()
+  find_package(SDL3 REQUIRED)
+endif()
 
 # Add ImGui
 add_library(imgui STATIC
@@ -32,7 +38,7 @@ add_library(imgui STATIC
     external/imgui/backends/imgui_impl_sdlrenderer3.cpp
 )
 target_include_directories(imgui PUBLIC external/imgui)
-target_link_libraries(imgui PRIVATE SDL3::SDL3)
+target_link_libraries(imgui PRIVATE ${SDL3_LIBRARIES})
 
 # Define executable
 file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
@@ -40,7 +46,7 @@ add_executable(AdvancedEdit ${SOURCES})
 
 target_include_directories(AdvancedEdit PUBLIC include)
 # Link libraries
-target_link_libraries(AdvancedEdit PRIVATE SDL3::SDL3 imgui)
+target_link_libraries(AdvancedEdit PRIVATE ${SDL3_LIBRARIES} imgui)
 
 if(WIN32)
     add_custom_command(

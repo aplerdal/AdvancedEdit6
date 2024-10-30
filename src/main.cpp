@@ -12,8 +12,7 @@
 #include "tracklist.hpp"
 #include "tileset.hpp"
 #include "tilemap.hpp"
-
-
+#include "ai.hpp"
 
 #define WINDOW_HEIGHT 800
 #define WINDOW_WIDTH 1600
@@ -43,6 +42,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
         new TrackList,
         new Tileset,
         new Tilemap,
+        new AI,
     };
 
     if (!SDL_CreateWindowAndRenderer("AdvancedEdit", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE, &as->window, &as->renderer)) {

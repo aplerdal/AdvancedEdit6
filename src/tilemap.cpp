@@ -71,10 +71,12 @@ void Tilemap::update(AppState* as){
     state.win_size = ImGui::GetWindowSize();
     state.cursor_pos = ImVec2(state.win_pos.x + state.translation.x, state.win_pos.y + state.translation.y);
     state.track_size = ImVec2((as->game_ctx.track_width*TILE_SIZE*state.scale), (as->game_ctx.track_height*TILE_SIZE*state.scale));
-    if (state.scale < 1.0f) 
-        SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_LINEAR);
-    else
-        SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_NEAREST);
+    if (ImGui::IsWindowFocused()){
+        if (state.scale < 1.0f) 
+            SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_LINEAR);
+        else
+            SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_NEAREST);
+    }
     ImGui::SetCursorScreenPos(state.cursor_pos);
     ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(state.track_size.x,state.track_size.y));
     
@@ -123,7 +125,7 @@ void Tilemap::draw_tile(AppState *as, int x, int y, int tile)
     SDL_SetRenderTarget(as->renderer, NULL);
 }
 void Tilemap::generate_cache(AppState* as, int track) {
-    TrackHeader* header = as->game_ctx.track_headers[track];
+    TrackHeader* header = as->game_ctx.tracks[track].track_header;
     uint8_t* base = (uint8_t*)header;
     uint8_t* layout = (uint8_t*)(base + header->layout_offset);
     int track_width = header->width * TILEMAP_UNIT;
