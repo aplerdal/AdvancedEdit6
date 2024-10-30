@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        submodules: recurse
+        submodules: recursive
     - name: Setup SDL
       # You may pin to the exact commit or the version.
       # uses: libsdl-org/setup-sdl@c3f966b577bda4aa30a21fab1875fc89f0151a6b
