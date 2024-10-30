@@ -1,5 +1,8 @@
 # Advanced Edit 6
 A work-in-progress, cross platform track/graphics editor for Mario Kart: Super Circuit.
+
+Mksc Hacking Discord: [https://discord.gg/C6dNp2EvGy](https://discord.gg/C6dNp2EvGy)
+
 ## Features
 - [x] Editing Tilemaps
 - [ ] Editing Palettes
