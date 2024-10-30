@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.22)
 project(AdvancedEdit)
 
 # Set C++ standard
@@ -18,14 +18,7 @@ endif()
 
 # Include SDL3 headers and link prebuilt libraries
 list(APPEND CMAKE_PREFIX_PATH "SDL3/cmake/")
-if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
-  set(USE_FLAGS "-s USE_SDL=3")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USE_FLAGS}")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USE_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${USE_FLAGS}")
-else()
-  find_package(SDL3 REQUIRED)
-endif()
+find_package(SDL3 REQUIRED)
 
 # Add ImGui
 add_library(imgui STATIC
