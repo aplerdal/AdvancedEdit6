@@ -43,5 +43,5 @@ jobs:
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.4.3
       with:
-        name: AdvancedEdit-dev-${{ github.sha }}.zip
+        name: AdvancedEdit-dev-${{ github.sha }}
         path: ${{github.workspace}}/build/${{env.BUILD_TYPE}}
