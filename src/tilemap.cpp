@@ -13,19 +13,19 @@
 #include <chrono>
 #include <iostream>
 
-std::string Map::get_name(){
-    return "Map";
+std::string Tilemap::get_name(){
+    return "Tilemap";
 }
-Map::Map(){
+Tilemap::Tilemap(){
     view = new ViewTool();
     tools = {
         new DrawTool,
     };
     active_tool = tools[0];
 }
-void Map::update(AppState* as){
+void Tilemap::update(AppState* as){
     if (!open) return;
-    ImGui::Begin("Map", &open, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::Begin("Tilemap", &open, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     if (!as->editor_ctx.file_open || as->editor_ctx.selected_track < 0) {
         ImGui::Text("No Track Loaded");
         ImGui::End();
@@ -37,16 +37,16 @@ void Map::update(AppState* as){
         return;
     }
     
-    // Map Menu Bar
+    // Tilemap Menu Bar
     if (ImGui::BeginMenuBar()){
-        if (ImGui::BeginMenu("view")){
+        if (ImGui::BeginMenu("View")){
             if (ImGui::MenuItem("Reset View")){
                 state.translation = ImVec2();
                 state.scale = 1.0f;
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("edit")){
+        if (ImGui::BeginMenu("Edit")){
             if (ImGui::MenuItem("Undo", "ctrl+z")){
                 undo(as);
             }
@@ -56,7 +56,7 @@ void Map::update(AppState* as){
         }
         if (ImGui::BeginMenu("Debug")){
             if (ImGui::MenuItem("Regen Buffer")){
-                Map::regen_map_texture(as);
+                Tilemap::regen_map_texture(as);
             }
             ImGui::EndMenu();
         }
@@ -84,7 +84,7 @@ void Map::update(AppState* as){
     
     ImGui::End();
 }
-void Map::undo(AppState *as)
+void Tilemap::undo(AppState *as)
 {
     if (as->editor_ctx.undo_stack.size() > 0) {
         as->editor_ctx.undo_stack.top()->undo(as);
@@ -92,7 +92,7 @@ void Map::undo(AppState *as)
         as->editor_ctx.undo_stack.pop();
     }
 }
-void Map::draw_tile(AppState *as, int x, int y, int tile)
+void Tilemap::draw_tile(AppState *as, int x, int y, int tile)
 {
     SDL_SetRenderTarget(as->renderer, as->editor_ctx.map_buffer);
     SDL_FRect src = { (float)(TILE_SIZE*(tile%16)), (float)(TILE_SIZE*(tile/16)), TILE_SIZE, TILE_SIZE };
@@ -101,7 +101,7 @@ void Map::draw_tile(AppState *as, int x, int y, int tile)
 
     SDL_SetRenderTarget(as->renderer, NULL);
 }
-void Map::generate_cache(AppState* as, int track) {
+void Tilemap::generate_cache(AppState* as, int track) {
     TrackHeader* header = as->game_ctx.track_headers[track];
     uint8_t* base = (uint8_t*)header;
     uint8_t* layout = (uint8_t*)(base + header->layout_offset);
@@ -129,7 +129,7 @@ void Map::generate_cache(AppState* as, int track) {
     as->editor_ctx.layout_buffer = layout_buffer;
     regen_map_texture(as);
 }
-void Map::regen_map_texture(AppState* as){
+void Tilemap::regen_map_texture(AppState* as){
     int track_width = as->game_ctx.track_width;
     int track_height = as->game_ctx.track_height;
     if (as->editor_ctx.map_buffer != nullptr){
@@ -223,7 +223,7 @@ void DrawCmd::execute(AppState* as) {
 }
 void DrawCmd::redo(AppState* as) {
     for (auto const& [pos,tile] : new_tiles) {
-        Map::draw_tile(as, pos.x, pos.y, tile);
+        Tilemap::draw_tile(as, pos.x, pos.y, tile);
         as->editor_ctx.layout_buffer[pos.y*as->game_ctx.track_width + pos.x] = tile;
     }
 }
@@ -238,7 +238,7 @@ void DrawCmd::undo(AppState* as) {
     }
     
     SDL_SetRenderTarget(as->renderer, NULL);
-    //Map::generate_cache(as, as->editor_ctx.selected_track);
+    //Tilemap::generate_cache(as, as->editor_ctx.selected_track);
 }
 
 void DrawTool::update(AppState *as, MapState& ms)
@@ -258,7 +258,7 @@ void DrawTool::update(AppState *as, MapState& ms)
             vec2i tile_pos = { tile%16, tile/16 };
             if (ImGui::IsMouseDown(ImGuiMouseButton_Left)){
                 if (!draw_buf.contains({hovered_tile.x, hovered_tile.y})) {
-                    Map::draw_tile(as, hovered_tile.x, hovered_tile.y, tile);
+                    Tilemap::draw_tile(as, hovered_tile.x, hovered_tile.y, tile);
                     draw_buf.insert(std::pair<vec2i, uint8_t>({hovered_tile.x, hovered_tile.y}, tile));
                 }
                 held = true;
@@ -281,4 +281,3 @@ void DrawTool::update(AppState *as, MapState& ms)
         }
     }
 }
-

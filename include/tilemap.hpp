@@ -13,9 +13,9 @@
 
 #define TILEMAP_UNIT 128
 
-class Map : public Scene {
+class Tilemap : public Scene {
 public:
-    Map();
+    Tilemap();
     void update(AppState* as) override;
     void undo(AppState* as);
     static void generate_cache(AppState* as, int track);

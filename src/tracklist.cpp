@@ -49,5 +49,5 @@ void TrackList::update(AppState* as){
 static void load_gfx_buffer(AppState* as, int track){
     as->editor_ctx.selected_track = track;
     Tileset::generate_cache(as, track);
-    Map::generate_cache(as, track);
+    Tilemap::generate_cache(as, track);
 }

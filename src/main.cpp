@@ -40,7 +40,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
         new MenuBar,
         new TrackList,
         new Tileset,
-        new Map,
+        new Tilemap,
     };
 
     if (!SDL_CreateWindowAndRenderer("AdvancedEdit", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE, &as->window, &as->renderer)) {

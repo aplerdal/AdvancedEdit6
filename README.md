@@ -14,7 +14,10 @@ The linux build instructions are not fully tested, but should work.
 #### Dependecies
 Make sure you have MSVC installed. It can be obtained by downloading visual studio and including `c/c++ Development Tools`.
 
-Clone or download this repositiory into a local directory using `git clone 
+Clone or download this repositiory into a local directory including submodules using 
+```
+git clone --recurse-submodules https://github.com/aplerdal/AdvancedEdit6.git
+```
 
 Then, to install sdl, visit their releases page: [https://github.com/libsdl-org/SDL/releases](https://github.com/libsdl-org/SDL/releases) and install SDL3-devel-3.X.X-VC.zip and extract it into `AdvancedEdit6/SDL`
 #### Building
@@ -25,4 +28,4 @@ cd build
 cmake ..
 cmake --build .
 ```
-And if there are no errors the result should be in `build/Debug/`. You may need to manually copy the SDL3.dll file from `libs` for the project to run.
+And if there are no errors the result should be in `build/Debug/`.
