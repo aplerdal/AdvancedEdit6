@@ -45,6 +45,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Setup SDL
+      uses: libsdl-org/setup-sdl@v1
+      with:
+        # Required version of SDL (2.x.y, 2-any, 2-latest, 2-head, 3-head), or git hash
+        version: 3-head
+        # CMake build type (Release/Debug/RelWithDebInfo/MinSizeRel)
+        build-type: Release
+        # Install dependencies (supports apt-get, dnf, brew, and msys2-pacman)
+        install-linux-dependencies: true
+    
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
       id: strings
