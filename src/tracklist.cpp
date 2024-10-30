@@ -1,11 +1,14 @@
 #include "tracklist.hpp"
+
+#include <SDL3/SDL.h>
 #include "imgui.h"
 #include "gbalzss.hpp"
-#include "graphics.hpp"
-#include "tileset.hpp"
-#include <SDL3/SDL.h>
+
 #include <string>
 #include <algorithm>
+
+#include "tileset.hpp"
+#include "graphics.hpp"
 #include "tilemap.hpp"
 
 std::string TrackList::get_name(){

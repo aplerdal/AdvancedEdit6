@@ -1,17 +1,19 @@
+#define SDL_MAIN_USE_CALLBACKS
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
-#include <iostream>
 #include "editor.hpp"
+
+#include <iostream>
 
 #include "menubar.hpp"
 #include "tracklist.hpp"
 #include "tileset.hpp"
 #include "tilemap.hpp"
 
-#define SDL_MAIN_USE_CALLBACKS
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
+
 
 #define WINDOW_HEIGHT 800
 #define WINDOW_WIDTH 1600

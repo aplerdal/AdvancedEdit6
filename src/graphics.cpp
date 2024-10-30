@@ -1,7 +1,11 @@
-#include <SDL3/SDL.h>
-#include <cstring>
-#include "types.h"
 #include "graphics.hpp"
+
+#include <SDL3/SDL.h>
+
+#include <cstring>
+
+#include "types.h"
+
 
 SDL_Surface* Graphics::decode_4bpp(uint8_t* data, SDL_Palette* pal)
 {

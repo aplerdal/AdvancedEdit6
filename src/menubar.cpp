@@ -1,10 +1,14 @@
-#include <SDL3/SDL.h>
-#include <fstream>
-#include "imgui.h"
-#include "editor.hpp"
 #include "menubar.hpp"
-#include "tracklist.hpp"
+
+#include <SDL3/SDL.h>
+#include "imgui.h"
+
+#include <fstream>
+
+#include "editor.hpp"
 #include "types.h"
+
+#include "tracklist.hpp"
 
 std::string MenuBar::get_name(){
     return "#MENUBAR";

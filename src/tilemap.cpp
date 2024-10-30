@@ -1,17 +1,20 @@
 #include "tilemap.hpp"
 
 #include <SDL3/SDL.h>
-#include <string>
-#include <vector>
-#include <span>
-#include "gbalzss.hpp"
 #include "imgui.h"
-#include "editor.hpp"
-#include "tileset.hpp"
-#include "tools.hpp"
+#include "gbalzss.hpp"
 
 #include <chrono>
 #include <iostream>
+#include <string>
+#include <vector>
+#include <span>
+
+#include "editor.hpp"
+
+#include "tileset.hpp"
+#include "tools.hpp"
+
 
 std::string Tilemap::get_name(){
     return "Tilemap";
