@@ -18,19 +18,20 @@ endif()
 
 # Include SDL3 headers and link prebuilt libraries
 list(APPEND CMAKE_PREFIX_PATH "SDL3/cmake/")
-find_package(SDL3 REQUIRED)
+  find_package(SDL3 REQUIRED)
+
 
 # Add ImGui
 add_library(imgui STATIC
-    external/imgui/imgui.cpp
-    external/imgui/imgui_demo.cpp
-    external/imgui/imgui_draw.cpp
-    external/imgui/imgui_widgets.cpp
-    external/imgui/imgui_tables.cpp
-    external/imgui/backends/imgui_impl_sdl3.cpp
-    external/imgui/backends/imgui_impl_sdlrenderer3.cpp
+    imgui/imgui.cpp
+    imgui/imgui_demo.cpp
+    imgui/imgui_draw.cpp
+    imgui/imgui_widgets.cpp
+    imgui/imgui_tables.cpp
+    imgui/backends/imgui_impl_sdl3.cpp
+    imgui/backends/imgui_impl_sdlrenderer3.cpp
 )
-target_include_directories(imgui PUBLIC external/imgui)
+target_include_directories(imgui PUBLIC imgui)
 target_link_libraries(imgui PRIVATE ${SDL3_LIBRARIES})
 
 # Define executable
