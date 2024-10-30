@@ -40,5 +40,5 @@ You must have g++ and SDL3-dev installed.
 mkdir build
 cd build
 cmake ..
-cmake --build
+cmake --build .
 ```
