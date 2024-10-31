@@ -135,7 +135,7 @@ static void DrawSector(ImDrawList* dl, MapState state, AiZone* zone, AiTarget* t
             } else {
                 dl->AddRectFilled(min, max, fill_color);
             }
-            dl->AddRect(min, max, border_color, border_scale);
+            dl->AddRect(min, max, border_color,0,0, border_scale);
         }
         // Draw Target
         {
