@@ -89,51 +89,120 @@ void AI::draw_ai_layout(AppState *as){
     
     dl->PushClipRect(vMin, vMax);
     TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
-    for (auto zone : t->ai_zones) {
-        if (zone->shape == ZONE_SHAPE_RECTANGLE) {
-            auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
-            dl->AddRect(min,max, ImColor(0.8f,0.1f,0.7f, 1.0f));
-            if (PointInRect(mouse_pos, min, max)){
-                dl->AddRectFilled(min, max, ImColor(0.8f,0.1f,0.7f, 0.5f));
-            } else {
-                dl->AddRectFilled(min, max, ImColor(0.8f,0.1f,0.7f, 0.3f));
-            }
-        } else {
-            ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            ImVec2 armx;
-            ImVec2 army;
-            float tri_size = state.scale*zone->half_width*TILE_SIZE*2.0f;
-            switch (zone->shape)
-            {
-                case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
-                    armx = ImVec2(vertex.x,vertex.y-tri_size);
-                    army = ImVec2(vertex.x-tri_size,vertex.y);
-                    break;
-                case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
-                    armx = ImVec2(vertex.x,vertex.y+tri_size);
-                    army = ImVec2(vertex.x+tri_size,vertex.y);
-                    break;
-                case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
-                    armx = ImVec2(vertex.x,vertex.y+tri_size);
-                    army = ImVec2(vertex.x-tri_size,vertex.y);
-                    break;
-                case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
-                    armx = ImVec2(vertex.x,vertex.y-tri_size);
-                    army = ImVec2(vertex.x+tri_size,vertex.y);
-                    break;
-            }
-            dl->AddTriangle(vertex,armx,army,ImColor(0.8f,0.1f,0.7f, 1.0f));
-            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size)) {
-                dl->AddTriangleFilled(vertex,armx,army,ImColor(0.8f,0.1f,0.7f, 0.5f));
-            } else {
-                dl->AddTriangleFilled(vertex,armx,army,ImColor(0.8f,0.1f,0.7f, 0.3f));
-            }
-            
-        }
+    for (int i = 0; i < t->ai_header->count; i++) {
+        auto zone = t->ai_zones[i];
+        auto target = t->ai_targets[0][i];
+        DrawSector(dl, state, zone, target);
     }
     dl->PopClipRect();
 }
+
+static void ZoneArms(uint8_t shape, ImVec2 vertex, float tri_size, ImVec2& armx, ImVec2& army) {
+    switch (shape)
+    {
+        case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
+            armx = ImVec2(vertex.x,vertex.y-tri_size);
+            army = ImVec2(vertex.x-tri_size,vertex.y);
+            break;
+        case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
+            armx = ImVec2(vertex.x,vertex.y+tri_size);
+            army = ImVec2(vertex.x+tri_size,vertex.y);
+            break;
+        case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
+            armx = ImVec2(vertex.x,vertex.y+tri_size);
+            army = ImVec2(vertex.x-tri_size,vertex.y);
+            break;
+        case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
+            armx = ImVec2(vertex.x,vertex.y-tri_size);
+            army = ImVec2(vertex.x+tri_size,vertex.y);
+            break;
+    }
+}
+static void DrawSector(ImDrawList* dl, MapState state, AiZone* zone, AiTarget* target){
+    ImColor fill_color = ImColor(0.8f,0.1f,0.7f, 0.3f);
+    ImColor hover_color = ImColor(0.8f,0.1f,0.7f, 0.5f);
+    ImColor border_color = ImColor(0.8f,0.1f,0.7f, 1.0f);
+    ImVec2 mouse_pos = ImGui::GetMousePos();
+    if (zone->shape == ZONE_SHAPE_RECTANGLE) {
+        // Draw Zone
+        float border_scale = 1.0f;
+        {
+            auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
+            if (PointInRect(mouse_pos, min, max)){
+                dl->AddRectFilled(min, max, hover_color);
+                border_scale = 3.0f;
+            } else {
+                dl->AddRectFilled(min, max, fill_color);
+            }
+            dl->AddRect(min, max, border_color, border_scale);
+        }
+        // Draw Target
+        {
+            ImVec2 rmin = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            ImVec2 rmax = ImVec2(rmin.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), rmin.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
+            ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
+            if (target_pos.x>=rmin.x && target_pos.x<=rmax.x) {
+                float dist_min = std::abs(target_pos.y-rmin.y);
+                float dist_max = std::abs(target_pos.y-rmax.y);
+                if (dist_min > dist_max)
+                    dl->AddTriangle(target_pos, rmax, ImVec2(rmin.x, rmax.y), border_color, border_scale);
+                else
+                    dl->AddTriangle(target_pos, rmin, ImVec2(rmax.x, rmin.y), border_color, border_scale);
+            } else if (target_pos.y>=rmin.y && target_pos.y<=rmax.y) {
+                float dist_min = std::abs(target_pos.x-rmin.x);
+                float dist_max = std::abs(target_pos.x-rmax.x);
+                if (dist_min > dist_max)
+                    dl->AddTriangle(target_pos, rmax, ImVec2(rmax.x, rmin.y), border_color, border_scale);
+                else
+                    dl->AddTriangle(target_pos, rmin, ImVec2(rmin.x, rmax.y), border_color, border_scale);
+            } else {
+                if (
+                    (target_pos.x <= rmin.x && target_pos.y <= rmin.y) ||
+                    (target_pos.x >= rmax.x && target_pos.y >= rmax.y)
+                )
+                    dl->AddTriangle(target_pos, ImVec2(rmax.x,rmin.y), ImVec2(rmin.x, rmax.y), border_color, border_scale);
+                else
+                    dl->AddTriangle(target_pos, ImVec2(rmin.x,rmax.y), ImVec2(rmax.x, rmin.y), border_color, border_scale);
+            }
+        }
+    } else {
+        // Draw Zone
+        ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+        ImVec2 armx, army;
+        float border_scale = 1.0f;
+        float tri_size;
+        {
+            tri_size = state.scale*zone->half_width*TILE_SIZE*2.0f;
+            ZoneArms(zone->shape, vertex, tri_size, armx, army);
+            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size)) {
+                dl->AddTriangleFilled(vertex,armx,army,hover_color);
+                border_scale = 3.0f;
+            } else {
+                dl->AddTriangleFilled(vertex,armx,army,fill_color);
+            }
+            dl->AddTriangle(vertex,armx,army,border_color, border_scale);
+        }
+        // Draw Target
+        {
+            ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
+            
+            float armx_dist = std::hypot(armx.x - target_pos.x, armx.y - target_pos.y);
+            float army_dist = std::hypot(army.x - target_pos.x, army.y - target_pos.y);
+            float vert_dist = std::hypot(vertex.x - target_pos.x, vertex.y - target_pos.y);
+            if (armx_dist > army_dist && armx_dist > vert_dist)
+                dl->AddTriangle(vertex, army, target_pos, border_color, border_scale);
+            else if (army_dist > armx_dist && army_dist > vert_dist)
+                dl->AddTriangle(vertex, armx, target_pos, border_color, border_scale);
+            else
+                dl->AddTriangle(armx, army, target_pos, border_color, border_scale);
+        }
+    }
+}
+static void DrawTarget(ImDrawList* dl, MapState state, AiZone* zone, AiTarget* t){
+    
+}
+
 static bool PointInTriangle(ImVec2 point, ImVec2 vertex, uint8_t shape, float size){
     float x = point.x - vertex.x;
     float y = point.y - vertex.y;
