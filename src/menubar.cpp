@@ -103,13 +103,10 @@ static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist
 
     as->game_ctx.eof = as->editor_ctx.file.data() + as->editor_ctx.file.size();
     for (int track = 0; track < TRACK_COUNT; track++) {
-        std::cout << "Track " << track << std::endl;
         as->game_ctx.tracks[track].track_header = (TrackHeader*)((uint8_t*)as->game_ctx.track_table + as->game_ctx.track_table->track_offsets[track]);
         as->game_ctx.tracks[track].definition_table = (TrackDefinition*)(&as->editor_ctx.file.data()[DEFINITION_TABLE_ADDRESS+track*sizeof(TrackDefinition)]);
         as->game_ctx.tracks[track].ai_header = (AiHeader*)((uint8_t*)as->game_ctx.tracks[track].track_header + as->game_ctx.tracks[track].track_header->ai_offset);
-        printf("ai header pos %Ix\n", 0x258000 + (intptr_t)as->game_ctx.tracks[track].ai_header - (intptr_t)as->game_ctx.track_table);
         auto h = as->game_ctx.tracks[track].ai_header;
-        printf("Header: \n    Count: %x\n    Target Offset: %x\n    Zone Offset: %x\n", h->count, h->targets_offset, h->zones_offset);
         as->game_ctx.tracks[track].ai_zones.resize(as->game_ctx.tracks[track].ai_header->count);
         for (int zone_group = 0; zone_group < 3; zone_group++){
             as->game_ctx.tracks[track].ai_targets[zone_group].resize(as->game_ctx.tracks[track].ai_header->count);

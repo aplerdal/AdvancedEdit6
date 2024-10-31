@@ -135,11 +135,14 @@ typedef struct{
     u16 flags;
 } AiTarget;
 
-#define ZONE_SHAPE_RECTANGLE 0
-#define ZONE_SHAPE_TRIANGLE_TOP_LEFT 1
-#define ZONE_SHAPE_TRIANGLE_TOP_RIGHT 2
-#define ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT 3
-#define ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT 4
+enum ZoneShape {
+    ZONE_SHAPE_RECTANGLE,
+    ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT,
+    ZONE_SHAPE_TRIANGLE_TOP_RIGHT,
+    ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT,
+    ZONE_SHAPE_TRIANGLE_TOP_LEFT,
+};
+
 
 #pragma pack(1)
 typedef struct{
@@ -148,6 +151,7 @@ typedef struct{
     u16 half_y;
     u16 half_width;
     u16 half_height;
+    u8 padding[3];
 } AiZone;
 
 typedef struct{

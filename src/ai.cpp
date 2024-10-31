@@ -76,14 +76,48 @@ void AI::update(AppState* as){
 }
 void AI::draw_ai_layout(AppState *as){
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    ImVec2 area_min = ImGui::GetWindowPos();
-    ImVec2 area_max = ImVec2(area_min.x + ImGui::GetWindowSize().x, area_min.y + ImGui::GetWindowSize().y);
-    dl->PushClipRect(area_min, area_max);
+    ImVec2 vMin = ImGui::GetWindowContentRegionMin();
+	ImVec2 vMax = ImGui::GetWindowContentRegionMax();
+
+    vMin.x += ImGui::GetWindowPos().x - ImGui::GetStyle().WindowPadding.x;
+    vMin.y += ImGui::GetWindowPos().y - ImGui::GetStyle().WindowPadding.y;
+    vMax.x += ImGui::GetWindowPos().x + ImGui::GetStyle().WindowPadding.x;
+    vMax.y += ImGui::GetWindowPos().y + ImGui::GetStyle().WindowPadding.y;
+    
+    dl->PushClipRect(vMin, vMax);
     TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
     for (auto zone : t->ai_zones) {
-        auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*2.0f));
-        auto max = ImVec2(min.x + (state.scale*zone->half_width*2.0f), min.y + (state.scale*zone->half_height*2.0f));
-        dl->AddRectFilled(min, max, ImColor(0.8f,0.1f,0.7f, 0.2f));
+        if (zone->shape == ZONE_SHAPE_RECTANGLE) {
+            auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
+            dl->AddRectFilled(min, max, ImColor(0.8f,0.1f,0.7f, 0.3f));
+            dl->AddRect(min,max, ImColor(0.8f,0.1f,0.7f, 1.0f));
+        } else {
+            ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            ImVec2 armx;
+            ImVec2 army;
+            switch (zone->shape)
+            {
+                case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
+                    armx = ImVec2(vertex.x,vertex.y-state.scale*zone->half_width*TILE_SIZE*2.0f);
+                    army = ImVec2(vertex.x-state.scale*zone->half_width*TILE_SIZE*2.0f,vertex.y);
+                    break;
+                case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
+                    armx = ImVec2(vertex.x,vertex.y-state.scale*zone->half_width*TILE_SIZE*2.0f);
+                    army = ImVec2(vertex.x+state.scale*zone->half_width*TILE_SIZE*2.0f,vertex.y);
+                    break;
+                case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
+                    armx = ImVec2(vertex.x,vertex.y+state.scale*zone->half_width*TILE_SIZE*2.0f);
+                    army = ImVec2(vertex.x-state.scale*zone->half_width*TILE_SIZE*2.0f,vertex.y);
+                    break;
+                case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
+                    armx = ImVec2(vertex.x,vertex.y+state.scale*zone->half_width*TILE_SIZE*2.0f);
+                    army = ImVec2(vertex.x+state.scale*zone->half_width*TILE_SIZE*2.0f,vertex.y);
+                    break;
+            }
+            dl->AddTriangleFilled(vertex,armx,army,ImColor(0.8f,0.1f,0.7f, 0.3f));
+            dl->AddTriangle(vertex,armx,army,ImColor(0.8f,0.1f,0.7f, 1.0f));
+        }
     }
     dl->PopClipRect();
 }
