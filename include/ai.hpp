@@ -15,3 +15,7 @@ private:
     ViewTool* view;
     MapState state;
 };
+
+static bool PointInTriangle(ImVec2 point, ImVec2 vertex, uint8_t shape, float size);
+static bool PointInCircle(ImVec2 point, ImVec2 position, float radius);
+static bool PointInRect(ImVec2 point, ImVec2 min, ImVec2 max);

@@ -50,7 +50,7 @@ typedef struct track {
     TrackHeader* track_header;
     AiHeader* ai_header;
     std::vector<AiZone*> ai_zones;
-    std::array<std::vector<Object*>,3> ai_targets;
+    std::array<std::vector<AiTarget*>,3> ai_targets;
 } TrackContext;
 
 typedef struct gameContext {

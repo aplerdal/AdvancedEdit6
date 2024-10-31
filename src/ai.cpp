@@ -2,6 +2,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <cmath>
+
 #include "tileset.hpp"
 
 std::string AI::get_name(){
@@ -75,6 +77,7 @@ void AI::update(AppState* as){
     ImGui::End();
 }
 void AI::draw_ai_layout(AppState *as){
+    ImVec2 mouse_pos = ImGui::GetMousePos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 vMin = ImGui::GetWindowContentRegionMin();
 	ImVec2 vMax = ImGui::GetWindowContentRegionMax();
@@ -90,37 +93,78 @@ void AI::draw_ai_layout(AppState *as){
         if (zone->shape == ZONE_SHAPE_RECTANGLE) {
             auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
             auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
-            dl->AddRectFilled(min, max, ImColor(0.8f,0.1f,0.7f, 0.3f));
             dl->AddRect(min,max, ImColor(0.8f,0.1f,0.7f, 1.0f));
+            if (PointInRect(mouse_pos, min, max)){
+                dl->AddRectFilled(min, max, ImColor(0.8f,0.1f,0.7f, 0.5f));
+            } else {
+                dl->AddRectFilled(min, max, ImColor(0.8f,0.1f,0.7f, 0.3f));
+            }
         } else {
             ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
             ImVec2 armx;
             ImVec2 army;
+            float tri_size = state.scale*zone->half_width*TILE_SIZE*2.0f;
             switch (zone->shape)
             {
                 case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
-                    armx = ImVec2(vertex.x,vertex.y-state.scale*zone->half_width*TILE_SIZE*2.0f);
-                    army = ImVec2(vertex.x-state.scale*zone->half_width*TILE_SIZE*2.0f,vertex.y);
+                    armx = ImVec2(vertex.x,vertex.y-tri_size);
+                    army = ImVec2(vertex.x-tri_size,vertex.y);
                     break;
                 case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
-                    armx = ImVec2(vertex.x,vertex.y-state.scale*zone->half_width*TILE_SIZE*2.0f);
-                    army = ImVec2(vertex.x+state.scale*zone->half_width*TILE_SIZE*2.0f,vertex.y);
+                    armx = ImVec2(vertex.x,vertex.y+tri_size);
+                    army = ImVec2(vertex.x+tri_size,vertex.y);
                     break;
                 case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
-                    armx = ImVec2(vertex.x,vertex.y+state.scale*zone->half_width*TILE_SIZE*2.0f);
-                    army = ImVec2(vertex.x-state.scale*zone->half_width*TILE_SIZE*2.0f,vertex.y);
+                    armx = ImVec2(vertex.x,vertex.y+tri_size);
+                    army = ImVec2(vertex.x-tri_size,vertex.y);
                     break;
                 case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
-                    armx = ImVec2(vertex.x,vertex.y+state.scale*zone->half_width*TILE_SIZE*2.0f);
-                    army = ImVec2(vertex.x+state.scale*zone->half_width*TILE_SIZE*2.0f,vertex.y);
+                    armx = ImVec2(vertex.x,vertex.y-tri_size);
+                    army = ImVec2(vertex.x+tri_size,vertex.y);
                     break;
             }
-            dl->AddTriangleFilled(vertex,armx,army,ImColor(0.8f,0.1f,0.7f, 0.3f));
             dl->AddTriangle(vertex,armx,army,ImColor(0.8f,0.1f,0.7f, 1.0f));
+            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size)) {
+                dl->AddTriangleFilled(vertex,armx,army,ImColor(0.8f,0.1f,0.7f, 0.5f));
+            } else {
+                dl->AddTriangleFilled(vertex,armx,army,ImColor(0.8f,0.1f,0.7f, 0.3f));
+            }
+            
         }
     }
     dl->PopClipRect();
 }
+static bool PointInTriangle(ImVec2 point, ImVec2 vertex, uint8_t shape, float size){
+    float x = point.x - vertex.x;
+    float y = point.y - vertex.y;
+    switch (shape)
+    {
+        case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
+            return (vertex.x - size <= point.x && point.x <= vertex.x) && 
+                   (vertex.y - size <= point.y && point.y <= vertex.y) && 
+                   (point.y >= -point.x + vertex.x + vertex.y - size);
+        case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
+            return (vertex.x <= point.x && point.x <= vertex.x + size) && 
+                   (vertex.y <= point.y && point.y <= vertex.y + size) && 
+                   (point.y <= -point.x + vertex.y + size + vertex.x);
+        case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
+            return (vertex.x - size <= point.x && point.x <= vertex.x) && 
+                   (vertex.y <= point.y && point.y <= vertex.y + size) && 
+                   (point.y <= point.x - vertex.x + vertex.y + size);
+        case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
+            return (vertex.x <= point.x && point.x <= vertex.x + size) && 
+                   (vertex.y - size <= point.y && point.y <= vertex.y) && 
+                   (point.y >= point.x - vertex.x + vertex.y - size);
+        default: return false;
+    }
+}
+static bool PointInCircle(ImVec2 point, ImVec2 position, float radius) {
+    return std::hypot(point.x-position.x, point.y-position.y) <= radius;
+}
+static bool PointInRect(ImVec2 point, ImVec2 min, ImVec2 max){
+    return (point.x >= min.x && point.y >= min.y) && (point.x <= max.x && point.y <= max.y);
+}
+
 void AI::undo(AppState *as)
 {
     if (as->editor_ctx.undo_stack.size() > 0) {

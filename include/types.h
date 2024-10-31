@@ -137,10 +137,10 @@ typedef struct{
 
 enum ZoneShape {
     ZONE_SHAPE_RECTANGLE,
-    ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT,
+    ZONE_SHAPE_TRIANGLE_TOP_LEFT,
     ZONE_SHAPE_TRIANGLE_TOP_RIGHT,
     ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT,
-    ZONE_SHAPE_TRIANGLE_TOP_LEFT,
+    ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT,
 };
 
 
@@ -153,6 +153,8 @@ typedef struct{
     u16 half_height;
     u8 padding[3];
 } AiZone;
+
+
 
 typedef struct{
     u8 id;
