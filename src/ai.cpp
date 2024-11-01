@@ -107,8 +107,14 @@ void AI::SectorInput(AppState *as, TrackContext* t) {
         if (zone->shape == ZONE_SHAPE_RECTANGLE) {
             auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
             auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
-        
-            if (PointInRect(mouse_pos, min, max) && !target_hovered){
+            if (PointInCircle(mouse_pos,min,sel_circle_rad)){
+                subhover = 0;
+                hovered_sector = i;
+            } else if (PointInCircle(mouse_pos,max,sel_circle_rad)){
+                subhover = 1;
+                hovered_sector = i;
+            } else if (PointInRect(mouse_pos, min, max) && !target_hovered){
+                subhover = -1;
                 hovered_sector = i;
             }
         } else {
@@ -117,13 +123,28 @@ void AI::SectorInput(AppState *as, TrackContext* t) {
             
             if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size) && !target_hovered) {
                 hovered_sector = i;
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+                if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                    if (!dragging) {
+                        dragging = true;
+                        drag_sector = i;
+                        is_dragging_target = false;
+                        drag_start = ImVec2(
+                            (uint16_t)((vertex.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f)),
+                            (uint16_t)((vertex.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f))
+                        );
+                        drag_offset = ImVec2(
+                            ((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f))-drag_start.x,
+                            ((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f))-drag_start.y
+                        );
+                    }
+                }
             }
         }
 
         ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
 
-        
-        if (std::hypot(target_pos.x-mouse_pos.x, target_pos.y - mouse_pos.y) < sel_circle_rad) {
+        if (PointInCircle(mouse_pos,target_pos,sel_circle_rad)) {
             hovered_sector = i;
             target_hovered = true;
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
@@ -139,19 +160,37 @@ void AI::SectorInput(AppState *as, TrackContext* t) {
                 }
             }
         }
+        
         if (dragging && drag_sector == i && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-            target->x = (uint16_t)((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE));
-            target->y = (uint16_t)((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE));
+            if (is_dragging_target) {
+                target->x = (uint16_t)((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE));
+                target->y = (uint16_t)((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE));
+            } else {
+                zone->half_x = (uint16_t)((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f) - drag_offset.x);
+                zone->half_y = (uint16_t)((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f) - drag_offset.y);
+            }
+            
         }
         if (dragging && drag_sector == i && ImGui::IsMouseReleased(ImGuiMouseButton_Left)){
-            PUSH_STACK(
-                as->editor_ctx.undo_stack,
-                new TranslateCmd(
-                    as, drag_sector, is_dragging_target,drag_start,
-                    ImVec2((float)target->x,(float)target->y)
-                )
-            );
+            if (is_dragging_target) {
+                PUSH_STACK(
+                    as->editor_ctx.undo_stack,
+                    new TranslateCmd(
+                        as, drag_sector, is_dragging_target,drag_start,
+                        ImVec2((float)target->x,(float)target->y)
+                    )
+                );
+            } else {
+                PUSH_STACK(
+                    as->editor_ctx.undo_stack,
+                    new TranslateCmd(
+                        as, drag_sector, is_dragging_target,drag_start,
+                        ImVec2((float)zone->half_x,(float)zone->half_y)
+                    )
+                );
+            }
+            
             dragging = false;
         }
     }
@@ -327,7 +366,6 @@ void TranslateCmd::execute(AppState *as)
 
 void TranslateCmd::redo(AppState *as)
 {
-    printf("drag sector = %d", drag_sector);
     if (dragging_target) {
         auto target = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_targets[0][drag_sector];
         target->x = (uint16_t)(new_pos.x);

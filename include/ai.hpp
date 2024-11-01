@@ -22,12 +22,14 @@ private:
     MapState state;
 
     int hovered_sector = -1;
+    int subhover = -1;
     bool target_hovered = false;
 
     bool dragging = false;
     bool is_dragging_target = false;
     int drag_sector = -1;
     ImVec2 drag_start = ImVec2();
+    ImVec2 drag_offset = ImVec2();
 };
 
 static void ZoneArms(uint8_t shape, ImVec2 vertex, float tri_size, ImVec2& armx, ImVec2& army);
