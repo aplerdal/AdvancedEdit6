@@ -63,7 +63,7 @@ void AI::update(AppState* as){
     }
     ImGui::SetCursorScreenPos(state.cursor_pos);
     ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(state.track_size.x,state.track_size.y));
-    draw_ai_layout(as);
+    DrawAILayout(as);
     // Handle Tools
     view->update(as, state);
 
@@ -76,7 +76,7 @@ void AI::update(AppState* as){
     
     ImGui::End();
 }
-void AI::draw_ai_layout(AppState *as){
+void AI::DrawAILayout(AppState *as){
     ImVec2 mouse_pos = ImGui::GetMousePos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 vMin = ImGui::GetWindowContentRegionMin();
@@ -88,13 +88,152 @@ void AI::draw_ai_layout(AppState *as){
     vMax.y += ImGui::GetWindowPos().y + ImGui::GetStyle().WindowPadding.y;
     
     dl->PushClipRect(vMin, vMax);
+
     TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
+    AI::SectorInput(as, t);
+    AI::SectorDraw(dl, t);
+
+    dl->PopClipRect();
+}
+void AI::SectorInput(AppState *as, TrackContext* t) {
+    ImVec2 mouse_pos = ImGui::GetMousePos();
+    hovered_sector = -1;
+    target_hovered = false;
     for (int i = 0; i < t->ai_header->count; i++) {
         auto zone = t->ai_zones[i];
         auto target = t->ai_targets[0][i];
-        DrawSector(dl, state, zone, target);
+
+        float sel_circle_rad = CIRCLE_RAD * state.scale;
+        if (zone->shape == ZONE_SHAPE_RECTANGLE) {
+            auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
+        
+            if (PointInRect(mouse_pos, min, max) && !target_hovered){
+                hovered_sector = i;
+            }
+        } else {
+            ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            float tri_size = state.scale*zone->half_width*TILE_SIZE*2.0f;
+            
+            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size) && !target_hovered) {
+                hovered_sector = i;
+            }
+        }
+
+        ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
+
+        
+        if (std::hypot(target_pos.x-mouse_pos.x, target_pos.y - mouse_pos.y) < sel_circle_rad) {
+            hovered_sector = i;
+            target_hovered = true;
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+            if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                if (!dragging) {
+                    dragging = true;
+                    drag_sector = i;
+                    is_dragging_target = true;
+                    drag_start = ImVec2(
+                        (uint16_t)((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE)),
+                        (uint16_t)((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE))
+                    );
+                }
+            }
+        }
+        if (dragging && drag_sector == i && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+            target->x = (uint16_t)((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE));
+            target->y = (uint16_t)((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE));
+        }
+        if (dragging && drag_sector == i && ImGui::IsMouseReleased(ImGuiMouseButton_Left)){
+            PUSH_STACK(
+                as->editor_ctx.undo_stack,
+                new TranslateCmd(
+                    as, drag_sector, is_dragging_target,drag_start,
+                    ImVec2((float)target->x,(float)target->y)
+                )
+            );
+            dragging = false;
+        }
     }
-    dl->PopClipRect();
+}
+const ImColor fill_color = ImColor(0.8f,0.1f,0.7f, 0.3f);
+const ImColor hover_color = ImColor(0.8f,0.1f,0.7f, 0.5f);
+const ImColor border_color = ImColor(0.8f,0.1f,0.7f, 1.0f);
+void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
+    for (int i = 0; i < t->ai_header->count; i++) {
+        auto zone = t->ai_zones[i];
+        auto target = t->ai_targets[0][i];
+
+        bool hovered = (i==hovered_sector && !target_hovered );
+        float border_scale = hovered? HOVER_BORDER_SIZE:1.0f;
+        float sel_circle_rad = CIRCLE_RAD * state.scale;
+
+        if (zone->shape == ZONE_SHAPE_RECTANGLE) {
+            auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
+
+            dl->AddRectFilled(min, max, hovered?hover_color:fill_color);
+            dl->AddRect(min,max,border_color, 0.0f, 0, border_scale);
+        
+            ImVec2 rmin = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            ImVec2 rmax = ImVec2(rmin.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), rmin.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
+            ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
+            
+            hovered = (i==hovered_sector && target_hovered);
+            dl->AddCircleFilled(target_pos, sel_circle_rad, hovered?hover_color:fill_color);
+            dl->AddCircle(target_pos, sel_circle_rad, border_color, 0, hovered? HOVER_BORDER_SIZE:1.0f);
+
+            if (target_pos.x>=rmin.x && target_pos.x<=rmax.x) {
+                float dist_min = std::abs(target_pos.y-rmin.y);
+                float dist_max = std::abs(target_pos.y-rmax.y);
+                
+                if (dist_min > dist_max)
+                    dl->AddTriangle(target_pos, rmax, ImVec2(rmin.x, rmax.y), border_color, border_scale);
+                else
+                    dl->AddTriangle(target_pos, rmin, ImVec2(rmax.x, rmin.y), border_color, border_scale);
+            } else if (target_pos.y>=rmin.y && target_pos.y<=rmax.y) {
+                float dist_min = std::abs(target_pos.x-rmin.x);
+                float dist_max = std::abs(target_pos.x-rmax.x);
+
+                if (dist_min > dist_max)
+                    dl->AddTriangle(target_pos, rmax, ImVec2(rmax.x, rmin.y), border_color, border_scale);
+                else
+                    dl->AddTriangle(target_pos, rmin, ImVec2(rmin.x, rmax.y), border_color, border_scale);
+            } else {
+                if ((target_pos.x <= rmin.x && target_pos.y <= rmin.y) || (target_pos.x >= rmax.x && target_pos.y >= rmax.y))
+                    dl->AddTriangle(target_pos, ImVec2(rmax.x,rmin.y), ImVec2(rmin.x, rmax.y), border_color, border_scale);
+                else
+                    dl->AddTriangle(target_pos, rmin, rmax, border_color, border_scale);
+            }
+        } else {
+            // Triangle Zone
+            ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            float tri_size = state.scale*zone->half_width*TILE_SIZE*2.0f;
+            ImVec2 armx, army;
+            ZoneArms(zone->shape, vertex, tri_size, armx, army);
+
+            dl->AddTriangleFilled(vertex, armx, army, hovered?hover_color : fill_color);
+            dl->AddTriangle(vertex, armx, army, border_color, border_scale);
+
+            // Target
+            ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
+
+            float armx_dist = std::hypot(armx.x - target_pos.x, armx.y - target_pos.y);
+            float army_dist = std::hypot(army.x - target_pos.x, army.y - target_pos.y);
+            float vert_dist = std::hypot(vertex.x - target_pos.x, vertex.y - target_pos.y);
+
+            hovered = (i==hovered_sector && target_hovered);
+            dl->AddCircleFilled(target_pos, sel_circle_rad, hovered?hover_color:fill_color);
+            dl->AddCircle(target_pos, sel_circle_rad, border_color, 0, hovered? HOVER_BORDER_SIZE:1.0f);
+
+            if (armx_dist > army_dist && armx_dist > vert_dist)
+                dl->AddTriangle(vertex, army, target_pos, border_color, border_scale);
+            else if (army_dist > armx_dist && army_dist > vert_dist)
+                dl->AddTriangle(vertex, armx, target_pos, border_color, border_scale);
+            else
+                dl->AddTriangle(armx, army, target_pos, border_color, border_scale);
+        }
+    }
 }
 
 static void ZoneArms(uint8_t shape, ImVec2 vertex, float tri_size, ImVec2& armx, ImVec2& army) {
@@ -117,90 +256,6 @@ static void ZoneArms(uint8_t shape, ImVec2 vertex, float tri_size, ImVec2& armx,
             army = ImVec2(vertex.x+tri_size,vertex.y);
             break;
     }
-}
-static void DrawSector(ImDrawList* dl, MapState state, AiZone* zone, AiTarget* target){
-    ImColor fill_color = ImColor(0.8f,0.1f,0.7f, 0.3f);
-    ImColor hover_color = ImColor(0.8f,0.1f,0.7f, 0.5f);
-    ImColor border_color = ImColor(0.8f,0.1f,0.7f, 1.0f);
-    ImVec2 mouse_pos = ImGui::GetMousePos();
-    if (zone->shape == ZONE_SHAPE_RECTANGLE) {
-        // Draw Zone
-        float border_scale = 1.0f;
-        {
-            auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
-            if (PointInRect(mouse_pos, min, max)){
-                dl->AddRectFilled(min, max, hover_color);
-                border_scale = 3.0f;
-            } else {
-                dl->AddRectFilled(min, max, fill_color);
-            }
-            dl->AddRect(min, max, border_color,0,0, border_scale);
-        }
-        // Draw Target
-        {
-            ImVec2 rmin = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            ImVec2 rmax = ImVec2(rmin.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), rmin.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
-            ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
-            if (target_pos.x>=rmin.x && target_pos.x<=rmax.x) {
-                float dist_min = std::abs(target_pos.y-rmin.y);
-                float dist_max = std::abs(target_pos.y-rmax.y);
-                if (dist_min > dist_max)
-                    dl->AddTriangle(target_pos, rmax, ImVec2(rmin.x, rmax.y), border_color, border_scale);
-                else
-                    dl->AddTriangle(target_pos, rmin, ImVec2(rmax.x, rmin.y), border_color, border_scale);
-            } else if (target_pos.y>=rmin.y && target_pos.y<=rmax.y) {
-                float dist_min = std::abs(target_pos.x-rmin.x);
-                float dist_max = std::abs(target_pos.x-rmax.x);
-                if (dist_min > dist_max)
-                    dl->AddTriangle(target_pos, rmax, ImVec2(rmax.x, rmin.y), border_color, border_scale);
-                else
-                    dl->AddTriangle(target_pos, rmin, ImVec2(rmin.x, rmax.y), border_color, border_scale);
-            } else {
-                if (
-                    (target_pos.x <= rmin.x && target_pos.y <= rmin.y) ||
-                    (target_pos.x >= rmax.x && target_pos.y >= rmax.y)
-                )
-                    dl->AddTriangle(target_pos, ImVec2(rmax.x,rmin.y), ImVec2(rmin.x, rmax.y), border_color, border_scale);
-                else
-                    dl->AddTriangle(target_pos, ImVec2(rmin.x,rmax.y), ImVec2(rmax.x, rmin.y), border_color, border_scale);
-            }
-        }
-    } else {
-        // Draw Zone
-        ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-        ImVec2 armx, army;
-        float border_scale = 1.0f;
-        float tri_size;
-        {
-            tri_size = state.scale*zone->half_width*TILE_SIZE*2.0f;
-            ZoneArms(zone->shape, vertex, tri_size, armx, army);
-            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size)) {
-                dl->AddTriangleFilled(vertex,armx,army,hover_color);
-                border_scale = 3.0f;
-            } else {
-                dl->AddTriangleFilled(vertex,armx,army,fill_color);
-            }
-            dl->AddTriangle(vertex,armx,army,border_color, border_scale);
-        }
-        // Draw Target
-        {
-            ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
-            
-            float armx_dist = std::hypot(armx.x - target_pos.x, armx.y - target_pos.y);
-            float army_dist = std::hypot(army.x - target_pos.x, army.y - target_pos.y);
-            float vert_dist = std::hypot(vertex.x - target_pos.x, vertex.y - target_pos.y);
-            if (armx_dist > army_dist && armx_dist > vert_dist)
-                dl->AddTriangle(vertex, army, target_pos, border_color, border_scale);
-            else if (army_dist > armx_dist && army_dist > vert_dist)
-                dl->AddTriangle(vertex, armx, target_pos, border_color, border_scale);
-            else
-                dl->AddTriangle(armx, army, target_pos, border_color, border_scale);
-        }
-    }
-}
-static void DrawTarget(ImDrawList* dl, MapState state, AiZone* zone, AiTarget* t){
-    
 }
 
 static bool PointInTriangle(ImVec2 point, ImVec2 vertex, uint8_t shape, float size){
@@ -254,5 +309,44 @@ void AI::redo(AppState *as)
     }
     if (as->editor_ctx.redo_stack.size() > 32) {
         as->editor_ctx.redo_stack.pop_front();
+    }
+}
+
+TranslateCmd::TranslateCmd(AppState* as, int drag_sector, bool dragging_target, ImVec2 old_pos, ImVec2 new_pos)
+{
+    this->old_pos = old_pos;
+    this->new_pos = new_pos;
+    this->drag_sector = drag_sector;
+    this->dragging_target = dragging_target;
+}
+
+void TranslateCmd::execute(AppState *as)
+{
+    return;
+}
+
+void TranslateCmd::redo(AppState *as)
+{
+    printf("drag sector = %d", drag_sector);
+    if (dragging_target) {
+        auto target = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_targets[0][drag_sector];
+        target->x = (uint16_t)(new_pos.x);
+        target->y = (uint16_t)(new_pos.y);
+    } else {
+        auto zone = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_zones[drag_sector];
+        zone->half_x = (uint16_t)(new_pos.x);
+        zone->half_y = (uint16_t)(new_pos.y);
+    }
+}
+void TranslateCmd::undo(AppState *as)
+{
+    if (dragging_target) {
+        auto target = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_targets[0][drag_sector];
+        target->x = (uint16_t)(old_pos.x);
+        target->y = (uint16_t)(old_pos.y);
+    } else {
+        auto zone = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_zones[drag_sector];
+        zone->half_x = (uint16_t)(old_pos.x);
+        zone->half_y = (uint16_t)(old_pos.y);
     }
 }

@@ -48,6 +48,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     if (!SDL_CreateWindowAndRenderer("AdvancedEdit", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE, &as->window, &as->renderer)) {
         return SDL_APP_FAILURE;
     }
+    SDL_SetRenderVSync(as->renderer, 1);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
