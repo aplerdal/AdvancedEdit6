@@ -1,8 +1,9 @@
 #include "ai.hpp"
 
 #include <SDL3/SDL.h>
-
+#include <limits>
 #include <cmath>
+
 
 #include "tileset.hpp"
 
@@ -98,99 +99,164 @@ void AI::DrawAILayout(AppState *as){
 void AI::SectorInput(AppState *as, TrackContext* t) {
     ImVec2 mouse_pos = ImGui::GetMousePos();
     hovered_sector = -1;
-    target_hovered = false;
+    hover_part = SECTOR_PART_NONE;
     for (int i = 0; i < t->ai_header->count; i++) {
         auto zone = t->ai_zones[i];
         auto target = t->ai_targets[0][i];
 
         float sel_circle_rad = CIRCLE_RAD * state.scale;
         if (zone->shape == ZONE_SHAPE_RECTANGLE) {
-            auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
-            if (PointInCircle(mouse_pos,min,sel_circle_rad)){
-                subhover = 0;
+            ImVec2 min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            ImVec2 max = ImVec2(min.x + (state.scale*(zone->half_width+1)*TILE_SIZE*2.0f), min.y + (state.scale*(zone->half_height+1)*TILE_SIZE*2.0f));
+            ImVec2 top_right = ImVec2(max.x,min.y);
+            ImVec2 bot_left = ImVec2(min.x, max.y);
+
+            bool scale_hovered = (
+                PointInCircle(mouse_pos,min,sel_circle_rad) || PointInCircle(mouse_pos,max,sel_circle_rad) ||
+                PointInCircle(mouse_pos,top_right,sel_circle_rad) || PointInCircle(mouse_pos,bot_left,sel_circle_rad) ||
+                PointInRect(mouse_pos,ImVec2(min.x,min.y-sel_circle_rad),ImVec2(max.x,min.y+sel_circle_rad)) || PointInRect(mouse_pos,ImVec2(min.x,max.y-sel_circle_rad),ImVec2(max.x,max.y+sel_circle_rad)) ||
+                PointInRect(mouse_pos,ImVec2(min.x-sel_circle_rad, min.y),ImVec2(min.x+sel_circle_rad, max.y)) || PointInRect(mouse_pos,ImVec2(max.x-sel_circle_rad, min.y),ImVec2(max.x+sel_circle_rad, max.y))
+            );
+
+            if (scale_hovered){
                 hovered_sector = i;
-            } else if (PointInCircle(mouse_pos,max,sel_circle_rad)){
-                subhover = 1;
+                SectorPart scale_part;
+                ImGuiMouseCursor scale_cursor;
+
+                if (PointInCircle(mouse_pos,min,sel_circle_rad)) {
+                    scale_cursor = ImGuiMouseCursor_ResizeNWSE;
+                    scale_part = SECTOR_PART_SCALE_NW;
+                } else if (PointInCircle(mouse_pos,max,sel_circle_rad)) {
+                    scale_cursor = ImGuiMouseCursor_ResizeNWSE;
+                    scale_part = SECTOR_PART_SCALE_SE;
+                } else if (PointInCircle(mouse_pos,top_right,sel_circle_rad)) {
+                    scale_cursor = ImGuiMouseCursor_ResizeNESW;
+                    scale_part = SECTOR_PART_SCALE_NE;
+                } else if (PointInCircle(mouse_pos,bot_left,sel_circle_rad)) {
+                    scale_cursor = ImGuiMouseCursor_ResizeNESW;
+                    scale_part = SECTOR_PART_SCALE_SW;
+                } else if (PointInRect(mouse_pos,ImVec2(min.x,min.y-sel_circle_rad),ImVec2(max.x,min.y+sel_circle_rad))) {
+                    scale_cursor = ImGuiMouseCursor_ResizeNS;
+                    scale_part = SECTOR_PART_SCALE_N;
+                } else if (PointInRect(mouse_pos,ImVec2(min.x,max.y-sel_circle_rad),ImVec2(max.x,max.y+sel_circle_rad))) {
+                    scale_cursor = ImGuiMouseCursor_ResizeNS;
+                    scale_part = SECTOR_PART_SCALE_S;
+                } else if (PointInRect(mouse_pos,ImVec2(min.x-sel_circle_rad, min.y),ImVec2(min.x+sel_circle_rad, max.y))) {
+                    scale_cursor = ImGuiMouseCursor_ResizeEW;
+                    scale_part = SECTOR_PART_SCALE_E;
+                } else {
+                    scale_cursor = ImGuiMouseCursor_ResizeEW;
+                    scale_part = SECTOR_PART_SCALE_W;
+                }
+                ImGui::SetMouseCursor(scale_cursor);
+                hover_part = scale_part;
+                // TODO: Set start pos
+                BeginDrag(i, scale_part, *zone, *target, ImVec2());
+            } else if (PointInRect(mouse_pos, min, max)) {
+                // Drag zone
                 hovered_sector = i;
-            } else if (PointInRect(mouse_pos, min, max) && !target_hovered){
-                subhover = -1;
-                hovered_sector = i;
+                hover_part = SECTOR_PART_ZONE;
+                ImVec2 start = ImVec2(zone->half_x,zone->half_y);
+                BeginDrag(i,SECTOR_PART_ZONE, *zone, *target, ImVec2(
+                        ((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f))-start.x,
+                        ((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f))-start.y
+                    )
+                );
             }
         } else {
             ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            float tri_size = state.scale*zone->half_width*TILE_SIZE*2.0f;
+            float tri_size = state.scale*(zone->half_width+1)*TILE_SIZE*2.0f;
             
-            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size) && !target_hovered) {
+            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size)) {
                 hovered_sector = i;
                 ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-                if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-                    if (!dragging) {
-                        dragging = true;
-                        drag_sector = i;
-                        is_dragging_target = false;
-                        drag_start = ImVec2(
-                            (uint16_t)((vertex.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f)),
-                            (uint16_t)((vertex.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f))
-                        );
-                        drag_offset = ImVec2(
-                            ((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f))-drag_start.x,
-                            ((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f))-drag_start.y
-                        );
-                    }
-                }
+                BeginDrag(i,SECTOR_PART_ZONE, *zone, *target,ImVec2(
+                        ((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f))-zone->half_x,
+                        ((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f))-zone->half_y
+                    )
+                );
             }
         }
 
         ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
-
+        
         if (PointInCircle(mouse_pos,target_pos,sel_circle_rad)) {
             hovered_sector = i;
-            target_hovered = true;
+            hover_part = SECTOR_PART_TARGET;
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-            if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-                if (!dragging) {
-                    dragging = true;
-                    drag_sector = i;
-                    is_dragging_target = true;
-                    drag_start = ImVec2(
-                        (uint16_t)((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE)),
-                        (uint16_t)((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE))
-                    );
-                }
-            }
+            printf("Start\nTarget:\n  x:%d\n  y:%d\n", target->x, target->y);
+            BeginDrag(i, SECTOR_PART_TARGET, *zone, *target, ImVec2());
         }
         
+        // Handle drag updates
         if (dragging && drag_sector == i && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            ImVec2 mouse_rel = ImVec2(
+                (mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE),
+                (mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE)
+            );
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-            if (is_dragging_target) {
-                target->x = (uint16_t)((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE));
-                target->y = (uint16_t)((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE));
-            } else {
-                zone->half_x = (uint16_t)((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f) - drag_offset.x);
-                zone->half_y = (uint16_t)((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f) - drag_offset.y);
+            uint16_t delta;
+            switch (drag_part){
+                case SECTOR_PART_TARGET:
+                    target->x = clampCast<uint16_t>(mouse_rel.x);
+                    target->y = clampCast<uint16_t>(mouse_rel.y);
+                    break;
+                case SECTOR_PART_ZONE:
+                    zone->half_x = clampCast<uint16_t>((mouse_rel.x / 2.0f) - drag_offset.x);
+                    zone->half_y = clampCast<uint16_t>((mouse_rel.y / 2.0f) - drag_offset.y);
+                    break;
+                case SECTOR_PART_SCALE_NW:
+                    delta = zone->half_x - clampCast<uint16_t>(mouse_rel.x / 2.0f);
+                    zone->half_x -= delta;
+                    zone->half_width += delta-1;
+
+                    delta = zone->half_y - clampCast<uint16_t>(mouse_rel.y / 2.0f);
+                    zone->half_y -= delta;
+                    zone->half_height += delta-1;
+                    break;
+                case SECTOR_PART_SCALE_NE:
+                    zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x) - 1;
+
+                    delta = zone->half_y - clampCast<uint16_t>(mouse_rel.y / 2.0f);
+                    zone->half_y -= delta;
+                    zone->half_height += delta-1;
+                    break;
+                case SECTOR_PART_SCALE_SW:
+                    delta = zone->half_x - clampCast<uint16_t>(mouse_rel.x / 2.0f);
+                    zone->half_x -= delta;
+                    zone->half_width += delta - 1;
+
+                    zone->half_height = clampCast<uint16_t>((mouse_rel.y / 2.0f)-zone->half_y) - 1;
+                    break;
+                case SECTOR_PART_SCALE_SE:
+                    zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x) - 1;
+
+                    zone->half_height = clampCast<uint16_t>((mouse_rel.y / 2.0f)-zone->half_y) - 1;
+                    break;
+                case SECTOR_PART_SCALE_E:
+                    delta = zone->half_x - clampCast<uint16_t>(mouse_rel.x / 2.0f);
+                    zone->half_x -= delta;
+                    zone->half_width += delta - 1;
+                    break;
+                case SECTOR_PART_SCALE_W:
+                    zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x) - 1;
+                    break;
+                case SECTOR_PART_SCALE_S:
+                    zone->half_height = clampCast<uint16_t>((mouse_rel.y / 2.0f)-zone->half_y) - 1;
+                    break;
+                case SECTOR_PART_SCALE_N:
+                    delta = zone->half_y - clampCast<uint16_t>(mouse_rel.y / 2.0f);
+                    zone->half_y -= delta;
+                    zone->half_height += delta - 1;
+                    break;
             }
             
         }
         if (dragging && drag_sector == i && ImGui::IsMouseReleased(ImGuiMouseButton_Left)){
-            if (is_dragging_target) {
-                PUSH_STACK(
-                    as->editor_ctx.undo_stack,
-                    new TranslateCmd(
-                        as, drag_sector, is_dragging_target,drag_start,
-                        ImVec2((float)target->x,(float)target->y)
-                    )
-                );
-            } else {
-                PUSH_STACK(
-                    as->editor_ctx.undo_stack,
-                    new TranslateCmd(
-                        as, drag_sector, is_dragging_target,drag_start,
-                        ImVec2((float)zone->half_x,(float)zone->half_y)
-                    )
-                );
-            }
-            
+            PUSH_STACK(
+                as->editor_ctx.undo_stack,
+                new AiModifyCmd(as, drag_sector, old_zone, *zone, old_target, *target)
+            );
             dragging = false;
         }
     }
@@ -203,24 +269,27 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
         auto zone = t->ai_zones[i];
         auto target = t->ai_targets[0][i];
 
-        bool hovered = (i==hovered_sector && !target_hovered );
-        float border_scale = hovered? HOVER_BORDER_SIZE:1.0f;
+        bool zone_hovered = (i==hovered_sector && hover_part==SECTOR_PART_ZONE);
+        bool target_hovered = (i==hovered_sector && hover_part == SECTOR_PART_TARGET);
+        
+        float border_scale = zone_hovered? HOVER_BORDER_SIZE:1.0f;
         float sel_circle_rad = CIRCLE_RAD * state.scale;
 
         if (zone->shape == ZONE_SHAPE_RECTANGLE) {
+            // Zone
             auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            auto max = ImVec2(min.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), min.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
+            auto max = ImVec2(min.x + (state.scale*(zone->half_width+1)*TILE_SIZE*2.0f), min.y + (state.scale*(zone->half_height+1)*TILE_SIZE*2.0f));
 
-            dl->AddRectFilled(min, max, hovered?hover_color:fill_color);
+            dl->AddRectFilled(min, max, zone_hovered?hover_color:fill_color);
             dl->AddRect(min,max,border_color, 0.0f, 0, border_scale);
-        
+
+            // Target
             ImVec2 rmin = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            ImVec2 rmax = ImVec2(rmin.x + (state.scale*zone->half_width*TILE_SIZE*2.0f), rmin.y + (state.scale*zone->half_height*TILE_SIZE*2.0f));
+            ImVec2 rmax = ImVec2(rmin.x + (state.scale*(zone->half_width+1)*TILE_SIZE*2.0f), rmin.y + (state.scale*(zone->half_height+1)*TILE_SIZE*2.0f));
             ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
             
-            hovered = (i==hovered_sector && target_hovered);
-            dl->AddCircleFilled(target_pos, sel_circle_rad, hovered?hover_color:fill_color);
-            dl->AddCircle(target_pos, sel_circle_rad, border_color, 0, hovered? HOVER_BORDER_SIZE:1.0f);
+            dl->AddCircleFilled(target_pos, sel_circle_rad, target_hovered?hover_color:fill_color);
+            dl->AddCircle(target_pos, sel_circle_rad, border_color, 0, target_hovered? HOVER_BORDER_SIZE:1.0f);
 
             if (target_pos.x>=rmin.x && target_pos.x<=rmax.x) {
                 float dist_min = std::abs(target_pos.y-rmin.y);
@@ -246,12 +315,16 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
             }
         } else {
             // Triangle Zone
-            ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            float tri_size = state.scale*zone->half_width*TILE_SIZE*2.0f;
-            ImVec2 armx, army;
-            ZoneArms(zone->shape, vertex, tri_size, armx, army);
+            //ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            //float tri_size = state.scale*(zone->half_width+1)*TILE_SIZE*2.0f;
+            ImVec2 vertex, armx, army;
+            GetZonePoints(zone, vertex, armx, army);
+            // Holy shit I need to make my own vector type or use a different one this sucks ass
+            vertex = ImVec2(state.cursor_pos.x + vertex.x * state.scale * TILE_SIZE * 2.0f, state.cursor_pos.y + vertex.y * state.scale * TILE_SIZE * 2.0f);
+            armx = ImVec2(state.cursor_pos.x + armx.x * state.scale * TILE_SIZE * 2.0f, state.cursor_pos.y + armx.y * state.scale * TILE_SIZE * 2.0f);
+            army = ImVec2(state.cursor_pos.x + army.x * state.scale * TILE_SIZE * 2.0f, state.cursor_pos.y + army.y * state.scale * TILE_SIZE * 2.0f);
 
-            dl->AddTriangleFilled(vertex, armx, army, hovered?hover_color : fill_color);
+            dl->AddTriangleFilled(vertex, armx, army, zone_hovered?hover_color : fill_color);
             dl->AddTriangle(vertex, armx, army, border_color, border_scale);
 
             // Target
@@ -261,9 +334,8 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
             float army_dist = std::hypot(army.x - target_pos.x, army.y - target_pos.y);
             float vert_dist = std::hypot(vertex.x - target_pos.x, vertex.y - target_pos.y);
 
-            hovered = (i==hovered_sector && target_hovered);
-            dl->AddCircleFilled(target_pos, sel_circle_rad, hovered?hover_color:fill_color);
-            dl->AddCircle(target_pos, sel_circle_rad, border_color, 0, hovered? HOVER_BORDER_SIZE:1.0f);
+            dl->AddCircleFilled(target_pos, sel_circle_rad, target_hovered?hover_color:fill_color);
+            dl->AddCircle(target_pos, sel_circle_rad, target_hovered, 0, zone_hovered? HOVER_BORDER_SIZE:1.0f);
 
             if (armx_dist > army_dist && armx_dist > vert_dist)
                 dl->AddTriangle(vertex, army, target_pos, border_color, border_scale);
@@ -275,24 +347,41 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
     }
 }
 
-static void ZoneArms(uint8_t shape, ImVec2 vertex, float tri_size, ImVec2& armx, ImVec2& army) {
-    switch (shape)
+void AI::BeginDrag(int sector, SectorPart part, AiZone old_zone, AiTarget old_target, ImVec2 offset){
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        if (!dragging) {
+            dragging = true;
+            drag_sector = sector;
+            drag_part = part;
+            this->old_zone = old_zone;
+            this->old_target = old_target;
+            drag_offset = offset;
+        }
+    }
+}
+
+static void GetZonePoints(AiZone* zone, ImVec2& vertex, ImVec2& armx, ImVec2& army) {
+    switch (zone->shape)
     {
         case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
-            armx = ImVec2(vertex.x,vertex.y-tri_size);
-            army = ImVec2(vertex.x-tri_size,vertex.y);
+            vertex = ImVec2(zone->half_x+1, zone->half_y+1);
+            armx = ImVec2(vertex.x,vertex.y-(zone->half_width+1));
+            army = ImVec2(vertex.x-(zone->half_width+1),vertex.y);
             break;
         case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
-            armx = ImVec2(vertex.x,vertex.y+tri_size);
-            army = ImVec2(vertex.x+tri_size,vertex.y);
+            vertex = ImVec2(zone->half_x, zone->half_y);
+            armx = ImVec2(vertex.x,vertex.y+zone->half_width+1);
+            army = ImVec2(vertex.x+zone->half_width+1,vertex.y);
             break;
         case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
-            armx = ImVec2(vertex.x,vertex.y+tri_size);
-            army = ImVec2(vertex.x-tri_size,vertex.y);
+            vertex = ImVec2(zone->half_x+1, zone->half_y);
+            armx = ImVec2(vertex.x,vertex.y+zone->half_width+1);
+            army = ImVec2(vertex.x-(zone->half_width+1),vertex.y);
             break;
         case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
-            armx = ImVec2(vertex.x,vertex.y-tri_size);
-            army = ImVec2(vertex.x+tri_size,vertex.y);
+            vertex = ImVec2(zone->half_x, zone->half_y+1);
+            armx = ImVec2(vertex.x,vertex.y-(zone->half_width+1));
+            army = ImVec2(vertex.x+zone->half_width+1,vertex.y);
             break;
     }
 }
@@ -328,6 +417,11 @@ static bool PointInRect(ImVec2 point, ImVec2 min, ImVec2 max){
     return (point.x >= min.x && point.y >= min.y) && (point.x <= max.x && point.y <= max.y);
 }
 
+template<typename T>
+T clampCast(float value) {
+    return (T)SDL_clamp(value, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
+}
+
 void AI::undo(AppState *as)
 {
     if (as->editor_ctx.undo_stack.size() > 0) {
@@ -351,40 +445,43 @@ void AI::redo(AppState *as)
     }
 }
 
-TranslateCmd::TranslateCmd(AppState* as, int drag_sector, bool dragging_target, ImVec2 old_pos, ImVec2 new_pos)
-{
-    this->old_pos = old_pos;
-    this->new_pos = new_pos;
+AiModifyCmd::AiModifyCmd(AppState* as, int drag_sector, AiZone old_zone, AiZone new_zone, AiTarget old_target, AiTarget new_target){
+    this->old_zone = old_zone;
+    this->new_zone = new_zone;
+    this->old_target = old_target;
+    this->new_target = new_target;
     this->drag_sector = drag_sector;
-    this->dragging_target = dragging_target;
 }
+void AiModifyCmd::redo(AppState *as)
+{
+    auto zone = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_zones[drag_sector];
+    auto target = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_targets[0][drag_sector];
+    
+    zone->half_x = new_zone.half_x;
+    zone->half_y = new_zone.half_y;
+    zone->half_width = new_zone.half_width;
+    zone->half_height = new_zone.half_height;
 
-void TranslateCmd::execute(AppState *as)
-{
-    return;
+    target->x = new_target.x;
+    target->x = new_target.y;
+    target->flags = new_target.flags;
+    target->speed = new_target.speed;
 }
+void AiModifyCmd::undo(AppState *as)
+{
+    auto zone = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_zones[drag_sector];
+    auto target = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_targets[0][drag_sector];
 
-void TranslateCmd::redo(AppState *as)
-{
-    if (dragging_target) {
-        auto target = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_targets[0][drag_sector];
-        target->x = (uint16_t)(new_pos.x);
-        target->y = (uint16_t)(new_pos.y);
-    } else {
-        auto zone = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_zones[drag_sector];
-        zone->half_x = (uint16_t)(new_pos.x);
-        zone->half_y = (uint16_t)(new_pos.y);
-    }
+    zone->half_x = old_zone.half_x;
+    zone->half_y = old_zone.half_y;
+    zone->half_width = old_zone.half_width;
+    zone->half_height = old_zone.half_height;
+
+    target->x = old_target.x;
+    target->y = old_target.y;
+    target->flags = old_target.flags;
+    target->speed = old_target.speed;
 }
-void TranslateCmd::undo(AppState *as)
-{
-    if (dragging_target) {
-        auto target = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_targets[0][drag_sector];
-        target->x = (uint16_t)(old_pos.x);
-        target->y = (uint16_t)(old_pos.y);
-    } else {
-        auto zone = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_zones[drag_sector];
-        zone->half_x = (uint16_t)(old_pos.x);
-        zone->half_y = (uint16_t)(old_pos.y);
-    }
+void AiModifyCmd::execute(AppState *as) {
+
 }

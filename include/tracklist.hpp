@@ -13,7 +13,7 @@ static const int trackMapping[] = {
      4, 5, 6, 7, //         Flower
      8, 9,10,11, //         Lightning
     12,13,14,15, //         Star
-    16,17,18,18, //         Special
+    16,17,18,19, //         Special
     20,21,22,23, //         Battle
     24,25,29,27, // MKSC    Mushroom
     32,37,38,31, //         Flower 
