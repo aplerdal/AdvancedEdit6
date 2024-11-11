@@ -3,7 +3,7 @@
 
 A work-in-progress, cross platform track/graphics editor for Mario Kart: Super Circuit.
 
-For support, ask in `#antimattur` in the Mksc Hacking Discord: [https://discord.gg/C6dNp2EvGy](https://discord.gg/C6dNp2EvGy) or open an issue.
+For support, ask in `#antimattur` in the [Mksc Hacking Discord](https://discord.gg/C6dNp2EvGy) or open an issue.
 
 ## Features
 - [x] Editing Tilemaps
