@@ -6,10 +6,10 @@
 #define CIRCLE_RAD 5.0f
 #define HOVER_BORDER_SIZE 3.0f
 
+// Organized by Priority, highest index is highest priority.
 enum SectorPart{
     SECTOR_PART_NONE,
     SECTOR_PART_ZONE,
-    SECTOR_PART_TARGET,
     SECTOR_PART_SCALE_N,
     SECTOR_PART_SCALE_S,
     SECTOR_PART_SCALE_E,
@@ -18,7 +18,7 @@ enum SectorPart{
     SECTOR_PART_SCALE_SW,
     SECTOR_PART_SCALE_NE,
     SECTOR_PART_SCALE_SE,
-    
+    SECTOR_PART_TARGET,
 };
 enum ScalePart{
     SCALE_NESW,

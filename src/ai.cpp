@@ -96,6 +96,67 @@ void AI::DrawAILayout(AppState *as){
 
     dl->PopClipRect();
 }
+static void SetHover(SectorPart part, SectorPart& current) {
+    if ((int)part>(int)current) {
+        current = part;
+    }
+}
+void SectorInputRework(AppState*as, TrackContext* t) {
+    ImVec2 mouse_pos = ImGui::GetMousePos();
+    hovered_sector = -1;
+    hover_part = SECTOR_PART_NONE;
+    // Get hovered sector and part
+    for (int i = 0; i<ai_header->count; i++) {
+        auto zone = t->ai_zones[i];
+        auto target = t->ai_targets[0][i];
+
+        float sel_circle_rad = CIRCLE_RAD * state.scale;
+        if (zone->shape == ZONE_SHAPE_RECTANGLE) {
+            ImVec2 min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            ImVec2 max = ImVec2(min.x + (state.scale*(zone->half_width+1)*TILE_SIZE*2.0f), min.y + (state.scale*(zone->half_height+1)*TILE_SIZE*2.0f));
+            ImVec2 top_right = ImVec2(max.x,min.y);
+            ImVec2 bot_left = ImVec2(min.x, max.y);
+            
+            SectorPart hov_part
+            int old_sector = hovered_sector;
+            hovered_sector = i;
+            if (PointInCircle(mouse_pos,min,sel_circle_rad)) {
+                hov_part = SECTOR_PART_SCALE_NW;
+            } else if (PointInCircle(mouse_pos,max,sel_circle_rad)) {
+                hov_part = SECTOR_PART_SCALE_SE;
+            } else if (PointInCircle(mouse_pos,top_right,sel_circle_rad)) {
+                hov_part = SECTOR_PART_SCALE_NE;
+            } else if (PointInCircle(mouse_pos,bot_left,sel_circle_rad)) {
+                hov_part = SECTOR_PART_SCALE_SW;
+            } else if (PointInRect(mouse_pos,ImVec2(min.x,min.y-sel_circle_rad),ImVec2(max.x,min.y+sel_circle_rad))) {
+                hov_part = SECTOR_PART_SCALE_N;
+            } else if (PointInRect(mouse_pos,ImVec2(min.x,max.y-sel_circle_rad),ImVec2(max.x,max.y+sel_circle_rad))) {
+                hov_part = SECTOR_PART_SCALE_S;
+            } else if (PointInRect(mouse_pos,ImVec2(min.x-sel_circle_rad, min.y),ImVec2(min.x+sel_circle_rad, max.y))) {
+                hov_part = SECTOR_PART_SCALE_E;
+            } else if (PointInRect(mouse_pos,ImVec2(max.x-sel_circle_rad, min.y),ImVec2(max.x+sel_circle_rad, max.y))){
+                hov_part = SECTOR_PART_SCALE_W;
+            } else if (PointInRect(mouse_pos, min, max)) {
+                hov_part = SECTOR_PART_ZONE;
+            } else {
+                // Lowest priority, will not override existing stuff
+                hov_part = SECTOR_PART_NONE;
+            }
+            SetHover(hov_part, hover_part);
+        } else {
+            ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
+            float tri_size = state.scale*(zone->half_width+1)*TILE_SIZE*2.0f;
+            
+            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size)) {
+                SetHover(SECTOR_PART_TARGET, hover_part);
+            }
+        }
+    }
+    // Handle input on sector
+    if (hovered_sector != -1) {
+
+    }
+}
 void AI::SectorInput(AppState *as, TrackContext* t) {
     ImVec2 mouse_pos = ImGui::GetMousePos();
     hovered_sector = -1;
@@ -150,7 +211,6 @@ void AI::SectorInput(AppState *as, TrackContext* t) {
                 }
                 ImGui::SetMouseCursor(scale_cursor);
                 hover_part = scale_part;
-                // TODO: Set start pos
                 BeginDrag(i, scale_part, *zone, *target, ImVec2());
             } else if (PointInRect(mouse_pos, min, max)) {
                 // Drag zone
