@@ -4,6 +4,7 @@
 #define TILESET_SIZE 16
 #define TILE_DISP_SIZE 16
 #define TILE_SIZE 8
+#define TILE_SIZE_2 ImVec2(TILE_SIZE, TILE_SIZE)
 
 class Tileset : public Scene {
 public:

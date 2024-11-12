@@ -64,15 +64,17 @@ void AI::update(AppState* as){
     }
     ImGui::SetCursorScreenPos(state.cursor_pos);
     ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(state.track_size.x,state.track_size.y));
-    DrawAILayout(as);
-    // Handle Tools
-    view->update(as, state);
+    if (ImGui::IsWindowFocused()){ 
+        DrawAILayout(as); 
+        // Handle Tools
+        view->update(as, state);
 
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) {
-        undo(as);
-    }
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y)) {
-        redo(as);
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) {
+            undo(as);
+        }
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y)) {
+            redo(as);
+        }
     }
     
     ImGui::End();
@@ -91,14 +93,15 @@ void AI::DrawAILayout(AppState *as){
     dl->PushClipRect(vMin, vMax);
 
     TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
-    AI::SectorInput(as, t);
+    AI::SectorInputRework(as, t);
     AI::SectorDraw(dl, t);
 
     dl->PopClipRect();
 }
-static void SetHover(SectorPart part, SectorPart& current) {
+static void SetHover(SectorPart part, SectorPart& current, int new_hov_sec, int& hov_sec) {
     if ((int)part>(int)current) {
         current = part;
+        hov_sec = new_hov_sec;
     }
 }
 void AI::SectorInputRework(AppState*as, TrackContext* t) {
@@ -118,8 +121,6 @@ void AI::SectorInputRework(AppState*as, TrackContext* t) {
             ImVec2 bot_left = ImVec2(min.x, max.y);
             
             SectorPart hov_part;
-            int old_sector = hovered_sector;
-            hovered_sector = i;
             if (PointInCircle(mouse_pos,min,sel_circle_rad)) {
                 hov_part = SECTOR_PART_SCALE_NW;
             } else if (PointInCircle(mouse_pos,max,sel_circle_rad)) {
@@ -142,20 +143,24 @@ void AI::SectorInputRework(AppState*as, TrackContext* t) {
                 // Lowest priority, will not override existing stuff
                 hov_part = SECTOR_PART_NONE;
             }
-            SetHover(hov_part, hover_part);
+            SetHover(hov_part, hover_part, i, hovered_sector);
         } else {
-            ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            float tri_size = state.scale*(zone->half_width+1)*TILE_SIZE*2.0f;
-            
-            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size)) {
-                SetHover(SECTOR_PART_TARGET, hover_part);
+            ImVec2 vertex, armx, army;
+            GetZonePoints(zone, vertex, armx, army);
+            vertex = state.cursor_pos + (vertex*state.scale*TILE_SIZE*2.0f);
+            armx = state.cursor_pos + (armx*state.scale*TILE_SIZE*2.0f);
+            army = state.cursor_pos + (army*state.scale*TILE_SIZE*2.0f);
+            // ERR
+            if (PointInTriangle(mouse_pos, vertex, armx, army)) {
+                SetHover(SECTOR_PART_ZONE, hover_part, i, hovered_sector);
             }
         }
+
     }
     // Handle input on sector if not dragging
     if (dragging) {
-        auto zone = t->ai_zones[hovered_sector];
-        auto target = t->ai_targets[0][hovered_sector];
+        auto zone = t->ai_zones[drag_sector];
+        auto target = t->ai_targets[0][drag_sector];
         hovered_sector = drag_sector;
         hover_part = drag_part;
         if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -271,8 +276,8 @@ void AI::SectorInput(AppState *as, TrackContext* t) {
 
         float sel_circle_rad = CIRCLE_RAD * state.scale;
         if (zone->shape == ZONE_SHAPE_RECTANGLE) {
-            ImVec2 min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            ImVec2 max = ImVec2(min.x + (state.scale*(zone->half_width+1)*TILE_SIZE*2.0f), min.y + (state.scale*(zone->half_height+1)*TILE_SIZE*2.0f));
+            ImVec2 min = state.cursor_pos + (ImVec2(zone->half_x,zone->half_y)*TILE_SIZE*2.0f*state.scale);
+            ImVec2 max = min + (ImVec2(zone->half_width+1,zone->half_height+1)*TILE_SIZE*2.0f*state.scale);
             ImVec2 top_right = ImVec2(max.x,min.y);
             ImVec2 bot_left = ImVec2(min.x, max.y);
 
@@ -331,7 +336,7 @@ void AI::SectorInput(AppState *as, TrackContext* t) {
             ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
             float tri_size = state.scale*(zone->half_width+1)*TILE_SIZE*2.0f;
             
-            if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size)) {
+            /*if (PointInTriangle(mouse_pos, vertex, zone->shape, tri_size)) {
                 hovered_sector = i;
                 ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
                 BeginDrag(i,SECTOR_PART_ZONE, *zone, *target,ImVec2(
@@ -339,7 +344,7 @@ void AI::SectorInput(AppState *as, TrackContext* t) {
                         ((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f))-zone->half_y
                     )
                 );
-            }
+            }*/
         }
 
         ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
@@ -550,29 +555,17 @@ static void GetZonePoints(AiZone* zone, ImVec2& vertex, ImVec2& armx, ImVec2& ar
     }
 }
 
-static bool PointInTriangle(ImVec2 point, ImVec2 vertex, uint8_t shape, float size){
-    float x = point.x - vertex.x;
-    float y = point.y - vertex.y;
-    switch (shape)
-    {
-        case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
-            return (vertex.x - size <= point.x && point.x <= vertex.x) && 
-                   (vertex.y - size <= point.y && point.y <= vertex.y) && 
-                   (point.y >= -point.x + vertex.x + vertex.y - size);
-        case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
-            return (vertex.x <= point.x && point.x <= vertex.x + size) && 
-                   (vertex.y <= point.y && point.y <= vertex.y + size) && 
-                   (point.y <= -point.x + vertex.y + size + vertex.x);
-        case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
-            return (vertex.x - size <= point.x && point.x <= vertex.x) && 
-                   (vertex.y <= point.y && point.y <= vertex.y + size) && 
-                   (point.y <= point.x - vertex.x + vertex.y + size);
-        case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
-            return (vertex.x <= point.x && point.x <= vertex.x + size) && 
-                   (vertex.y - size <= point.y && point.y <= vertex.y) && 
-                   (point.y >= point.x - vertex.x + vertex.y - size);
-        default: return false;
-    }
+float Area(const ImVec2& A, const ImVec2& B, const ImVec2& C) {
+    return std::abs((A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y)) / 2.0f);
+}
+static bool PointInTriangle(ImVec2 point, ImVec2 vertex, ImVec2 armx, ImVec2 army){
+    float triArea = Area(vertex, armx, army);
+    
+    float area1 = Area(point, vertex, armx);
+    float area2 = Area(point, armx, army);
+    float area3 = Area(point, army, vertex);
+    
+    return (0.1f > abs((area1 + area2 + area3)-triArea));
 }
 static bool PointInCircle(ImVec2 point, ImVec2 position, float radius) {
     return std::hypot(point.x-position.x, point.y-position.y) <= radius;
