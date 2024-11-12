@@ -101,12 +101,12 @@ static void SetHover(SectorPart part, SectorPart& current) {
         current = part;
     }
 }
-void SectorInputRework(AppState*as, TrackContext* t) {
+void AI::SectorInputRework(AppState*as, TrackContext* t) {
     ImVec2 mouse_pos = ImGui::GetMousePos();
     hovered_sector = -1;
     hover_part = SECTOR_PART_NONE;
     // Get hovered sector and part
-    for (int i = 0; i<ai_header->count; i++) {
+    for (int i = 0; i<t->ai_header->count; i++) {
         auto zone = t->ai_zones[i];
         auto target = t->ai_targets[0][i];
 
@@ -117,7 +117,7 @@ void SectorInputRework(AppState*as, TrackContext* t) {
             ImVec2 top_right = ImVec2(max.x,min.y);
             ImVec2 bot_left = ImVec2(min.x, max.y);
             
-            SectorPart hov_part
+            SectorPart hov_part;
             int old_sector = hovered_sector;
             hovered_sector = i;
             if (PointInCircle(mouse_pos,min,sel_circle_rad)) {
@@ -152,9 +152,113 @@ void SectorInputRework(AppState*as, TrackContext* t) {
             }
         }
     }
-    // Handle input on sector
-    if (hovered_sector != -1) {
+    // Handle input on sector if not dragging
+    if (dragging) {
+        auto zone = t->ai_zones[hovered_sector];
+        auto target = t->ai_targets[0][hovered_sector];
+        hovered_sector = drag_sector;
+        hover_part = drag_part;
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            ImVec2 mouse_rel = ImVec2(
+                (mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE),
+                (mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE)
+            );
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+            uint16_t delta;
+            switch (drag_part){
+                case SECTOR_PART_TARGET:
+                    target->x = clampCast<uint16_t>(mouse_rel.x);
+                    target->y = clampCast<uint16_t>(mouse_rel.y);
+                    break;
+                case SECTOR_PART_ZONE:
+                    zone->half_x = clampCast<uint16_t>((mouse_rel.x / 2.0f) - drag_offset.x);
+                    zone->half_y = clampCast<uint16_t>((mouse_rel.y / 2.0f) - drag_offset.y);
+                    break;
+                case SECTOR_PART_SCALE_NW:
+                    delta = zone->half_x - clampCast<uint16_t>(mouse_rel.x / 2.0f);
+                    zone->half_x -= delta;
+                    zone->half_width += delta-1;
 
+                    delta = zone->half_y - clampCast<uint16_t>(mouse_rel.y / 2.0f);
+                    zone->half_y -= delta;
+                    zone->half_height += delta-1;
+                    break;
+                case SECTOR_PART_SCALE_NE:
+                    zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x) - 1;
+
+                    delta = zone->half_y - clampCast<uint16_t>(mouse_rel.y / 2.0f);
+                    zone->half_y -= delta;
+                    zone->half_height += delta-1;
+                    break;
+                case SECTOR_PART_SCALE_SW:
+                    delta = zone->half_x - clampCast<uint16_t>(mouse_rel.x / 2.0f);
+                    zone->half_x -= delta;
+                    zone->half_width += delta - 1;
+
+                    zone->half_height = clampCast<uint16_t>((mouse_rel.y / 2.0f)-zone->half_y) - 1;
+                    break;
+                case SECTOR_PART_SCALE_SE:
+                    zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x) - 1;
+
+                    zone->half_height = clampCast<uint16_t>((mouse_rel.y / 2.0f)-zone->half_y) - 1;
+                    break;
+                case SECTOR_PART_SCALE_E:
+                    delta = zone->half_x - clampCast<uint16_t>(mouse_rel.x / 2.0f);
+                    zone->half_x -= delta;
+                    zone->half_width += delta - 1;
+                    break;
+                case SECTOR_PART_SCALE_W:
+                    zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x) - 1;
+                    break;
+                case SECTOR_PART_SCALE_S:
+                    zone->half_height = clampCast<uint16_t>((mouse_rel.y / 2.0f)-zone->half_y) - 1;
+                    break;
+                case SECTOR_PART_SCALE_N:
+                    delta = zone->half_y - clampCast<uint16_t>(mouse_rel.y / 2.0f);
+                    zone->half_y -= delta;
+                    zone->half_height += delta - 1;
+                    break;
+            }   
+        } else {
+            // dragging, but not holding mouse donw. Handle end of drag
+            PUSH_STACK(
+                as->editor_ctx.undo_stack,
+                new AiModifyCmd(as, drag_sector, old_zone, *zone, old_target, *target)
+            );
+            dragging = false;
+        }
+    } else if (hovered_sector > -1 && hover_part != SECTOR_PART_NONE) {
+        auto zone = t->ai_zones[hovered_sector];
+        auto target = t->ai_targets[0][hovered_sector];
+        switch (hover_part) {
+            case SECTOR_PART_ZONE:
+                {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+                    BeginDrag(hovered_sector,SECTOR_PART_ZONE, *zone, *target,ImVec2(
+                            ((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f))-zone->half_x,
+                            ((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f))-zone->half_y
+                        )
+                    );
+                } break;
+            case SECTOR_PART_SCALE_E:
+            case SECTOR_PART_SCALE_W:
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+                goto scaleDrag;
+            case SECTOR_PART_SCALE_N:
+            case SECTOR_PART_SCALE_S:
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+                goto scaleDrag;
+            case SECTOR_PART_SCALE_NE:
+            case SECTOR_PART_SCALE_SW:
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNESW);
+                goto scaleDrag;
+            case SECTOR_PART_SCALE_NW:
+            case SECTOR_PART_SCALE_SE:
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
+            scaleDrag:
+                BeginDrag(hovered_sector, hover_part, *zone, *target, ImVec2());
+                break;
+        }
     }
 }
 void AI::SectorInput(AppState *as, TrackContext* t) {

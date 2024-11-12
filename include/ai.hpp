@@ -34,6 +34,7 @@ public:
     void DrawAILayout(AppState* as);
     void undo(AppState* as);
     void redo(AppState* as);
+    void SectorInputRework(AppState*as, TrackContext* t);
     void SectorInput(AppState* as, TrackContext* t);
     void SectorDraw(ImDrawList *dl, TrackContext *t);
     void BeginDrag(int sector, SectorPart part, AiZone old_zone, AiTarget old_target, ImVec2 offset);
