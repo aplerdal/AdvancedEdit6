@@ -31,11 +31,10 @@ class AI : public Scene {
 public:
     AI();
     void update(AppState* as) override;
-    void DrawAILayout(AppState* as);
+    void DrawLayout(AppState* as);
     void undo(AppState* as);
     void redo(AppState* as);
-    void SectorInputRework(AppState*as, TrackContext* t);
-    void SectorInput(AppState* as, TrackContext* t);
+    void HandleInput(AppState*as, TrackContext* t);
     void SectorDraw(ImDrawList *dl, TrackContext *t);
     void BeginDrag(int sector, SectorPart part, AiZone old_zone, AiTarget old_target, ImVec2 offset);
     std::string get_name() override;
