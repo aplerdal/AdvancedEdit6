@@ -28,4 +28,5 @@ private:
     std::vector<Tool*> tools;
     MapState state;
     Tool* active_tool;
+    bool was_focused;
 };

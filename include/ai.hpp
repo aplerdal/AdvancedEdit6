@@ -3,13 +3,15 @@
 #include "editor.hpp"
 #include "tools.hpp"
 
-#define CIRCLE_RAD 5.0f
+#define SEL_DIST 5.0f
 #define HOVER_BORDER_SIZE 3.0f
 
 // Organized by Priority, highest index is highest priority.
 enum SectorPart{
     SECTOR_PART_NONE,
     SECTOR_PART_ZONE,
+    SECTOR_PART_SCALE_HYPOT,
+    SECTOR_PART_SCALE_ANGLE,
     SECTOR_PART_SCALE_N,
     SECTOR_PART_SCALE_S,
     SECTOR_PART_SCALE_E,
@@ -61,6 +63,7 @@ static void DrawTarget(ImDrawList* dl, MapState state, AiZone* zone, AiTarget* t
 static bool PointInTriangle(ImVec2 point, ImVec2 vertex, ImVec2 armx, ImVec2 army);
 static bool PointInCircle(ImVec2 point, ImVec2 position, float radius);
 static bool PointInRect(ImVec2 point, ImVec2 min, ImVec2 max);
+static bool PointInDiag(ImVec2 point, ImVec2 vertex, ImVec2 armx, ImVec2 army, float radius);
 
 template<typename T> T clampCast(float value);
 

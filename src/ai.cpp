@@ -4,7 +4,6 @@
 #include <limits>
 #include <cmath>
 
-
 #include "tileset.hpp"
 
 std::string AI::get_name(){
@@ -114,7 +113,7 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
         auto zone = t->ai_zones[i];
         auto target = t->ai_targets[0][i];
 
-        float sel_circle_rad = CIRCLE_RAD * state.scale;
+        float sel_dist = SEL_DIST * state.scale;
         if (zone->shape == ZONE_SHAPE_RECTANGLE) {
             ImVec2 min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
             ImVec2 max = ImVec2(min.x + (state.scale*(zone->half_width+1)*TILE_SIZE*2.0f), min.y + (state.scale*(zone->half_height+1)*TILE_SIZE*2.0f));
@@ -122,26 +121,26 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
             ImVec2 bot_left = ImVec2(min.x, max.y);
             
             SectorPart hov_part;
-            if (PointInCircle(mouse_pos,min,sel_circle_rad)) {
+            if (PointInCircle(mouse_pos,min,sel_dist)) {
                 hov_part = SECTOR_PART_SCALE_NW;
-            } else if (PointInCircle(mouse_pos,max,sel_circle_rad)) {
+            } else if (PointInCircle(mouse_pos,max,sel_dist)) {
                 hov_part = SECTOR_PART_SCALE_SE;
-            } else if (PointInCircle(mouse_pos,top_right,sel_circle_rad)) {
+            } else if (PointInCircle(mouse_pos,top_right,sel_dist)) {
                 hov_part = SECTOR_PART_SCALE_NE;
-            } else if (PointInCircle(mouse_pos,bot_left,sel_circle_rad)) {
+            } else if (PointInCircle(mouse_pos,bot_left,sel_dist)) {
                 hov_part = SECTOR_PART_SCALE_SW;
-            } else if (PointInRect(mouse_pos,ImVec2(min.x,min.y-sel_circle_rad),ImVec2(max.x,min.y+sel_circle_rad))) {
+            } else if (PointInRect(mouse_pos,ImVec2(min.x,min.y-sel_dist),ImVec2(max.x,min.y+sel_dist))) {
                 hov_part = SECTOR_PART_SCALE_N;
-            } else if (PointInRect(mouse_pos,ImVec2(min.x,max.y-sel_circle_rad),ImVec2(max.x,max.y+sel_circle_rad))) {
+            } else if (PointInRect(mouse_pos,ImVec2(min.x,max.y-sel_dist),ImVec2(max.x,max.y+sel_dist))) {
                 hov_part = SECTOR_PART_SCALE_S;
-            } else if (PointInRect(mouse_pos,ImVec2(min.x-sel_circle_rad, min.y),ImVec2(min.x+sel_circle_rad, max.y))) {
+            } else if (PointInRect(mouse_pos,ImVec2(min.x-sel_dist, min.y),ImVec2(min.x+sel_dist, max.y))) {
                 hov_part = SECTOR_PART_SCALE_E;
-            } else if (PointInRect(mouse_pos,ImVec2(max.x-sel_circle_rad, min.y),ImVec2(max.x+sel_circle_rad, max.y))){
+            } else if (PointInRect(mouse_pos,ImVec2(max.x-sel_dist, min.y),ImVec2(max.x+sel_dist, max.y))){
                 hov_part = SECTOR_PART_SCALE_W;
             } else if (PointInRect(mouse_pos, min, max)) {
                 hov_part = SECTOR_PART_ZONE;
             } else {
-                // Lowest priority, will not override existing stuff
+                // Lowest priority, as to not override existing hovered part;
                 hov_part = SECTOR_PART_NONE;
             }
             SetHover(hov_part, hover_part, i, hovered_sector);
@@ -151,15 +150,29 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
             vertex = state.cursor_pos + (vertex*state.scale*TILE_SIZE*2.0f);
             armx = state.cursor_pos + (armx*state.scale*TILE_SIZE*2.0f);
             army = state.cursor_pos + (army*state.scale*TILE_SIZE*2.0f);
-            // ERR
-            if (PointInTriangle(mouse_pos, vertex, armx, army)) {
-                SetHover(SECTOR_PART_ZONE, hover_part, i, hovered_sector);
+            
+            SectorPart hov_part;
+
+            ImVec2 offsetx = ImVec2((armx.x<vertex.x)?-sel_dist:sel_dist,0);
+            ImVec2 offsety = ImVec2(0,(army.y<vertex.y)?-sel_dist:sel_dist);
+
+
+            if (PointInTriangle(mouse_pos, vertex, armx-offsetx, army-offsety) != PointInTriangle(mouse_pos, vertex, armx+offsetx, army+offsety)) {
+                hov_part = SECTOR_PART_SCALE_HYPOT;
+            } else if (false) {
+                hov_part = SECTOR_PART_SCALE_ANGLE;
+            } else if (PointInTriangle(mouse_pos, vertex, armx, army)) {
+                hov_part = SECTOR_PART_ZONE;
+            } else {
+                hov_part = SECTOR_PART_NONE;
             }
+            SetHover(hov_part, hover_part, i, hovered_sector);
+
         }
 
         ImVec2 target_pos = state.cursor_pos + (ImVec2(target->x, target->y) * state.scale * TILE_SIZE);
 
-        if (PointInCircle(mouse_pos,target_pos,sel_circle_rad)) {
+        if (PointInCircle(mouse_pos,target_pos,sel_dist)) {
             SetHover(SECTOR_PART_TARGET, hover_part, i, hovered_sector);
         }
     }
@@ -229,6 +242,8 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
                     zone->half_y -= delta;
                     zone->half_height += delta - 1;
                     break;
+                case SECTOR_PART_SCALE_HYPOT:
+                    zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x); // TODO Correct triangle type offsets
             }   
         } else {
             // dragging, but not holding mouse donw. Handle end of drag
@@ -245,12 +260,22 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
             case SECTOR_PART_ZONE:
                 {
                     ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-                    BeginDrag(hovered_sector,SECTOR_PART_ZONE, *zone, *target,ImVec2(
-                            ((mouse_pos.x - state.cursor_pos.x)/(state.scale * TILE_SIZE * 2.0f))-zone->half_x,
-                            ((mouse_pos.y - state.cursor_pos.y)/(state.scale * TILE_SIZE * 2.0f))-zone->half_y
-                        )
-                    );
+                    BeginDrag(hovered_sector,SECTOR_PART_ZONE, *zone, *target, (mouse_pos-state.cursor_pos)/(state.scale*TILE_SIZE*2.0f)-ImVec2(zone->half_x, zone->half_y));
                 } break;
+            case SECTOR_PART_SCALE_HYPOT:
+                switch (zone->shape)
+                {
+                    case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
+                    case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
+                        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNESW);
+                        break;
+                    case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
+                    case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
+                        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
+                        break;
+                }
+                goto scaleDrag;
+                break;
             case SECTOR_PART_SCALE_E:
             case SECTOR_PART_SCALE_W:
                 ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
@@ -288,14 +313,14 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
         bool target_hovered = (i==hovered_sector && hover_part == SECTOR_PART_TARGET);
         
         float border_scale = zone_hovered? HOVER_BORDER_SIZE:1.0f;
-        float sel_circle_rad = CIRCLE_RAD * state.scale;
+        float sel_dist = SEL_DIST * state.scale;
 
         if (zone->shape == ZONE_SHAPE_RECTANGLE) {
             // Zone
             auto min = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
             auto max = ImVec2(min.x + (state.scale*(zone->half_width+1)*TILE_SIZE*2.0f), min.y + (state.scale*(zone->half_height+1)*TILE_SIZE*2.0f));
 
-            dl->AddRectFilled(min, max, zone_hovered?hover_color:fill_color);
+            dl->AddRectFilled(min, max, (zone_hovered||target_hovered)?hover_color:fill_color);
             dl->AddRect(min,max,border_color, 0.0f, 0, border_scale);
 
             // Target
@@ -303,45 +328,52 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
             ImVec2 rmax = ImVec2(rmin.x + (state.scale*(zone->half_width+1)*TILE_SIZE*2.0f), rmin.y + (state.scale*(zone->half_height+1)*TILE_SIZE*2.0f));
             ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
             
-            dl->AddCircleFilled(target_pos, sel_circle_rad, target_hovered?hover_color:fill_color);
-            dl->AddCircle(target_pos, sel_circle_rad, border_color, 0, target_hovered? HOVER_BORDER_SIZE:1.0f);
+            dl->AddCircleFilled(target_pos, sel_dist, target_hovered?hover_color:fill_color);
+            dl->AddCircle(target_pos, sel_dist, border_color, 0, target_hovered? HOVER_BORDER_SIZE:1.0f);
 
             if (target_pos.x>=rmin.x && target_pos.x<=rmax.x) {
                 float dist_min = std::abs(target_pos.y-rmin.y);
                 float dist_max = std::abs(target_pos.y-rmax.y);
                 
-                if (dist_min > dist_max)
-                    dl->AddTriangle(target_pos, rmax, ImVec2(rmin.x, rmax.y), border_color, border_scale);
-                else
-                    dl->AddTriangle(target_pos, rmin, ImVec2(rmax.x, rmin.y), border_color, border_scale);
+                if (dist_min > dist_max) {
+                    dl->AddLine(target_pos, rmax, border_color, border_scale);
+                    dl->AddLine(target_pos, ImVec2(rmin.x, rmax.y), border_color, border_scale);
+                } else {
+                    dl->AddLine(target_pos, rmin, border_color, border_scale);
+                    dl->AddLine(target_pos, ImVec2(rmax.x, rmin.y), border_color, border_scale);
+                }
             } else if (target_pos.y>=rmin.y && target_pos.y<=rmax.y) {
                 float dist_min = std::abs(target_pos.x-rmin.x);
                 float dist_max = std::abs(target_pos.x-rmax.x);
 
-                if (dist_min > dist_max)
-                    dl->AddTriangle(target_pos, rmax, ImVec2(rmax.x, rmin.y), border_color, border_scale);
-                else
-                    dl->AddTriangle(target_pos, rmin, ImVec2(rmin.x, rmax.y), border_color, border_scale);
+                if (dist_min > dist_max) {
+                    dl->AddLine(target_pos, rmax, border_color, border_scale);
+                    dl->AddLine(target_pos, ImVec2(rmax.x, rmin.y), border_color, border_scale);
+                } else {
+                    dl->AddLine(target_pos, rmin, border_color, border_scale);
+                    dl->AddLine(target_pos, ImVec2(rmin.x, rmax.y), border_color, border_scale);
+                }
             } else {
-                if ((target_pos.x <= rmin.x && target_pos.y <= rmin.y) || (target_pos.x >= rmax.x && target_pos.y >= rmax.y))
-                    dl->AddTriangle(target_pos, ImVec2(rmax.x,rmin.y), ImVec2(rmin.x, rmax.y), border_color, border_scale);
-                else
-                    dl->AddTriangle(target_pos, rmin, rmax, border_color, border_scale);
+                if ((target_pos.x <= rmin.x && target_pos.y <= rmin.y) || (target_pos.x >= rmax.x && target_pos.y >= rmax.y)) {
+                    dl->AddLine(target_pos, ImVec2(rmax.x, rmin.y), border_color, border_scale);
+                    dl->AddLine(target_pos, ImVec2(rmin.x, rmax.y), border_color, border_scale);
+                } else {
+                    dl->AddLine(target_pos, rmin, border_color, border_scale);
+                    dl->AddLine(target_pos, rmax, border_color, border_scale);
+                }
             }
         } else {
             // Triangle Zone
-            //ImVec2 vertex = ImVec2(state.cursor_pos.x+(state.scale*zone->half_x*TILE_SIZE*2.0f), state.cursor_pos.y+(state.scale*zone->half_y*TILE_SIZE*2.0f));
-            //float tri_size = state.scale*(zone->half_width+1)*TILE_SIZE*2.0f;
             ImVec2 vertex, armx, army;
             GetZonePoints(zone, vertex, armx, army);
-            // Holy shit I need to make my own vector type or use a different one this sucks ass
-            vertex = ImVec2(state.cursor_pos.x + vertex.x * state.scale * TILE_SIZE * 2.0f, state.cursor_pos.y + vertex.y * state.scale * TILE_SIZE * 2.0f);
-            armx = ImVec2(state.cursor_pos.x + armx.x * state.scale * TILE_SIZE * 2.0f, state.cursor_pos.y + armx.y * state.scale * TILE_SIZE * 2.0f);
-            army = ImVec2(state.cursor_pos.x + army.x * state.scale * TILE_SIZE * 2.0f, state.cursor_pos.y + army.y * state.scale * TILE_SIZE * 2.0f);
+            printf("vertex (%f,%f)\n armx (%f,%f)\n army (%f,%f)\n\n",vertex.x, vertex.y,armx.x, armx.y, army.x, army.y);
 
-            dl->AddTriangleFilled(vertex, armx, army, zone_hovered?hover_color : fill_color);
+            vertex = state.cursor_pos + vertex * state.scale * TILE_SIZE * 2.0f;
+            armx = state.cursor_pos + armx * state.scale * TILE_SIZE * 2.0f;
+            army = state.cursor_pos + army * state.scale * TILE_SIZE * 2.0f;
+            dl->AddTriangleFilled(vertex, armx, army, (zone_hovered||target_hovered)?hover_color : fill_color);
             dl->AddTriangle(vertex, armx, army, border_color, border_scale);
-
+            
             // Target
             ImVec2 target_pos = ImVec2(state.cursor_pos.x+(state.scale*target->x*TILE_SIZE), state.cursor_pos.y+(state.scale*target->y*TILE_SIZE));
 
@@ -349,15 +381,19 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
             float army_dist = std::hypot(army.x - target_pos.x, army.y - target_pos.y);
             float vert_dist = std::hypot(vertex.x - target_pos.x, vertex.y - target_pos.y);
 
-            dl->AddCircleFilled(target_pos, sel_circle_rad, target_hovered?hover_color:fill_color);
-            dl->AddCircle(target_pos, sel_circle_rad, target_hovered, 0, zone_hovered? HOVER_BORDER_SIZE:1.0f);
+            dl->AddCircleFilled(target_pos, sel_dist, target_hovered?hover_color:fill_color);
+            dl->AddCircle(target_pos, sel_dist, border_color, 0, zone_hovered? HOVER_BORDER_SIZE:1.0f);
 
-            if (armx_dist > army_dist && armx_dist > vert_dist)
-                dl->AddTriangle(vertex, army, target_pos, border_color, border_scale);
-            else if (army_dist > armx_dist && army_dist > vert_dist)
-                dl->AddTriangle(vertex, armx, target_pos, border_color, border_scale);
-            else
-                dl->AddTriangle(armx, army, target_pos, border_color, border_scale);
+            if (armx_dist > army_dist && armx_dist > vert_dist) {
+                dl->AddLine(target_pos, vertex, border_color, border_scale);
+                dl->AddLine(target_pos, army, border_color, border_scale);
+            } else if (army_dist > armx_dist && army_dist > vert_dist) {
+                dl->AddLine(target_pos, vertex, border_color, border_scale);
+                dl->AddLine(target_pos, armx, border_color, border_scale);
+            } else {
+                dl->AddLine(target_pos, armx, border_color, border_scale);
+                dl->AddLine(target_pos, army, border_color, border_scale);
+            }
         }
     }
 }
@@ -381,39 +417,38 @@ static void GetZonePoints(AiZone* zone, ImVec2& vertex, ImVec2& armx, ImVec2& ar
     #pragma warning(disable : 244)
         case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
             vertex = ImVec2(zone->half_x+1, zone->half_y+1);
-            armx = ImVec2(vertex.x,vertex.y-(zone->half_width+1));
-            army = ImVec2(vertex.x-(zone->half_width+1),vertex.y);
+            armx = ImVec2(vertex.x-(zone->half_width+1),vertex.y);
+            army = ImVec2(vertex.x,vertex.y-(zone->half_width+1));
             break;
         case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
             vertex = ImVec2(zone->half_x, zone->half_y);
-            armx = ImVec2(vertex.x,vertex.y+zone->half_width+1);
-            army = ImVec2(vertex.x+zone->half_width+1,vertex.y);
+            armx = ImVec2(vertex.x+zone->half_width+1,vertex.y);
+            army = ImVec2(vertex.x,vertex.y+zone->half_width+1);
             break;
         case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
             vertex = ImVec2(zone->half_x+1, zone->half_y);
-            armx = ImVec2(vertex.x,vertex.y+zone->half_width+1);
-            army = ImVec2(vertex.x-(zone->half_width+1),vertex.y);
+            armx = ImVec2(vertex.x-(zone->half_width+1),vertex.y);
+            army = ImVec2(vertex.x,vertex.y+zone->half_width+1);
             break;
         case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
             vertex = ImVec2(zone->half_x, zone->half_y+1);
-            armx = ImVec2(vertex.x,vertex.y-(zone->half_width+1));
-            army = ImVec2(vertex.x+zone->half_width+1,vertex.y);
+            armx = ImVec2(vertex.x+zone->half_width+1,vertex.y);
+            army = ImVec2(vertex.x,vertex.y-(zone->half_width+1));
             break;
     }
     #pragma warning(default : 244)
 }
 
-float Area(const ImVec2& A, const ImVec2& B, const ImVec2& C) {
-    return std::abs((A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y)) / 2.0f);
+static bool PointAboveLine(ImVec2 point, ImVec2 p1, ImVec2 p2){
+    return (point.x - p1.x) * (p2.y - p1.y) - (point.y - p1.y) * (p2.x - p1.x) > 0;
 }
 static bool PointInTriangle(ImVec2 point, ImVec2 vertex, ImVec2 armx, ImVec2 army){
-    float triArea = Area(vertex, armx, army);
-    
-    float area1 = Area(point, vertex, armx);
-    float area2 = Area(point, armx, army);
-    float area3 = Area(point, army, vertex);
-    
-    return (0.1f > abs((area1 + area2 + area3)-triArea));
+    ImVec2 min = ImVec2(__min(__min(armx.x, army.x),vertex.x),__min(__min(armx.y, army.y),vertex.y));
+    ImVec2 max = ImVec2(__max(__max(armx.x, army.x),vertex.x),__max(__max(armx.y, army.y),vertex.y));
+    if (PointInRect(point, min, max)){
+        return PointAboveLine(vertex, armx, army)==PointAboveLine(point, armx, army);
+    }
+    return false;
 }
 static bool PointInCircle(ImVec2 point, ImVec2 position, float radius) {
     return std::hypot(point.x-position.x, point.y-position.y) <= radius;
