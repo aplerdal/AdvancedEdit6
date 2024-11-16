@@ -243,7 +243,8 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
                     zone->half_height += delta - 1;
                     break;
                 case SECTOR_PART_SCALE_HYPOT:
-                    zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x); // TODO Correct triangle type offsets
+                    zone->half_width = clampCast<uint16_t>(abs((mouse_rel.x / 2.0f) - zone->half_x)); // TODO Correct triangle type offsets
+                    break;
             }   
         } else {
             // dragging, but not holding mouse donw. Handle end of drag
@@ -274,7 +275,7 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
                         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
                         break;
                 }
-                goto scaleDrag;
+                BeginDrag(hovered_sector,SECTOR_PART_SCALE_HYPOT, *zone, *target, (mouse_pos-state.cursor_pos)/(state.scale*TILE_SIZE*2.0f)-ImVec2(zone->half_x, zone->half_y));
                 break;
             case SECTOR_PART_SCALE_E:
             case SECTOR_PART_SCALE_W:
