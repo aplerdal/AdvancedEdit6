@@ -127,12 +127,18 @@ typedef struct{
     o16 targets_offset;
 } AiHeader;
 
+#define TARGET_FLAGS_INTERSECTION 1<<7
+#define TARGET_MASK_FLAGS 0xF0
+#define TARGET_MASK_SPEED 0x0F
 #pragma pack(1)
 typedef struct{
     u16 x;
     u16 y;
-    u16 speed;
-    u16 flags;
+    union {
+        u8 speed;
+        u8 flags;
+    };
+    u8 padding[3];
 } AiTarget;
 
 enum ZoneShape {

@@ -33,6 +33,7 @@ class AI : public Scene {
 public:
     AI();
     void update(AppState* as) override;
+    void inspector(AppState* as) override;
     void DrawLayout(AppState* as);
     void undo(AppState* as);
     void redo(AppState* as);
@@ -47,6 +48,9 @@ private:
 
     int hovered_sector = -1;
     SectorPart hover_part = SECTOR_PART_NONE;
+    
+    int selected_sector = -1;
+    SectorPart selected_part = SECTOR_PART_NONE;
 
     bool dragging = false;
     SectorPart drag_part = SECTOR_PART_NONE;

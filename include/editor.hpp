@@ -1,7 +1,11 @@
 #pragma once
 
-#include <vector>
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui.h"
 #include <SDL3/SDL.h>
+
+
+#include <vector>
 #include <fstream>
 #include <array>
 #include <deque>
@@ -14,6 +18,7 @@ class Command;
 inline void PUSH_STACK(std::deque<Command*>& queue, Command* value) {
     queue.push_back(value);
     if (queue.size()>32){
+        delete queue.front();
         queue.pop_front();
     }
 }
@@ -69,6 +74,7 @@ typedef struct editorContext {
     bool file_open = false;
     std::string file_name;
     std::vector<Scene*> scenes;
+    Scene* inspector;
 
     std::deque<Command*> undo_stack;
     std::deque<Command*> redo_stack;
@@ -100,7 +106,10 @@ static const struct
 };
 class Scene {
 public:
-    virtual void update(AppState* as) = 0;
+    virtual void update(AppState* as) = 0; 
+    virtual void inspector(AppState* as) {
+        ImGui::Text("No Window Focused");
+    };
     virtual std::string get_name() = 0;
     bool open = true;
 };

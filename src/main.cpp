@@ -5,6 +5,7 @@
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
+
 #include "editor.hpp"
 
 #include <iostream>
@@ -45,6 +46,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
         new Tilemap,
         new AI,
     };
+    as->editor_ctx.inspector = as->editor_ctx.scenes[0]; // Just do this because I am too tired to figure out a better solution
 
     if (!SDL_CreateWindowAndRenderer("AdvancedEdit", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE, &as->window, &as->renderer)) {
         return SDL_APP_FAILURE;
@@ -103,6 +105,10 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     for (auto o : as->editor_ctx.scenes) {
         o->update(as);
     }
+    ImGui::Begin("Inspector");
+        if (as->editor_ctx.inspector != nullptr)
+            as->editor_ctx.inspector->inspector(as);
+    ImGui::End();
 
     ImGui::Render();
     

@@ -81,7 +81,7 @@ static const char* tracksList[] = {
 // Flower
     "Mario Circuit",
     "Boo Lake",
-    "Cheese Lake",
+    "Cheese Land",
     "Bowser Castle 2",
 // Lightning
     "Luigi Circuit",

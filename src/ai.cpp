@@ -1,6 +1,6 @@
 #include "ai.hpp"
 
-#include <SDL3/SDL.h>
+#include "editor.hpp"
 #include <limits>
 #include <cmath>
 
@@ -68,6 +68,9 @@ void AI::update(AppState* as){
         // Handle Tools
         view->update(as, state);
         
+        // Claim inspector
+        as->editor_ctx.inspector = this;
+
         HandleInput(as, &as->game_ctx.tracks[as->editor_ctx.selected_track]);
         
         if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) {
@@ -79,6 +82,31 @@ void AI::update(AppState* as){
     }
     
     ImGui::End();
+}
+void AI::inspector(AppState* as) {
+    ImGui::Text("AI Inspector");
+    ImGui::Separator();
+    if (selected_sector > -1 && selected_part != SECTOR_PART_NONE) {
+        TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
+        if (selected_part == SECTOR_PART_ZONE) {
+            auto zone = t->ai_zones[selected_sector];
+            ImGui::Text("Zone %d:", selected_sector);
+            int ishape = zone->shape;
+            ImGui::Combo("Shape", &ishape, "Rectangle\0Triangle Top Left\0Triangle Top Right\0Triangle Bottom Right\0Triangle Bottom Left\0");
+            zone->shape = (uint8_t)ishape;
+        } else if (selected_part == SECTOR_PART_TARGET) {
+            auto target = t->ai_targets[0][selected_sector];
+            ImGui::Text("Target %d:", selected_sector);
+            int ispeed = target->speed & TARGET_MASK_SPEED;
+            ImGui::InputInt("Speed", &ispeed);
+            target->speed = (target->speed & TARGET_MASK_FLAGS) | ((uint8_t)ispeed&TARGET_MASK_SPEED);
+            uint32_t uflags = (uint32_t)target->flags&TARGET_MASK_FLAGS;
+            ImGui::CheckboxFlags("Intersection?", &uflags, TARGET_FLAGS_INTERSECTION);
+            target->flags = ((uint8_t)(uflags&TARGET_MASK_FLAGS)) | (target->flags&TARGET_MASK_SPEED);
+        } else {
+            ImGui::Text("You shouldn't be seeing this...");
+        }
+    }
 }
 void AI::DrawLayout(AppState *as){
     ImVec2 mouse_pos = ImGui::GetMousePos();
@@ -176,8 +204,9 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
             SetHover(SECTOR_PART_TARGET, hover_part, i, hovered_sector);
         }
     }
-    // Handle input on sector if not dragging
+    
     if (dragging) {
+        // Handle input when dragging
         auto zone = t->ai_zones[drag_sector];
         auto target = t->ai_targets[0][drag_sector];
         hovered_sector = drag_sector;
@@ -247,58 +276,72 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
                     break;
             }   
         } else {
-            // dragging, but not holding mouse donw. Handle end of drag
+            // dragging, but not holding mouse down. Handle end of drag
             PUSH_STACK(
                 as->editor_ctx.undo_stack,
                 new AiModifyCmd(as, drag_sector, old_zone, *zone, old_target, *target)
             );
             dragging = false;
+
+            if (hover_part == SECTOR_PART_TARGET || hover_part == SECTOR_PART_ZONE) {
+                selected_part = hover_part;
+                selected_sector = hovered_sector;
+            }
         }
-    } else if (hovered_sector > -1 && hover_part != SECTOR_PART_NONE) {
-        auto zone = t->ai_zones[hovered_sector];
-        auto target = t->ai_targets[0][hovered_sector];
-        switch (hover_part) {
-            case SECTOR_PART_ZONE:
-                {
+    } else {
+        // Handle input on sector if not dragging
+        if (hovered_sector > -1 && hover_part != SECTOR_PART_NONE) {
+            auto zone = t->ai_zones[hovered_sector];
+            auto target = t->ai_targets[0][hovered_sector];
+            switch (hover_part) {
+                case SECTOR_PART_ZONE:
+                    {
+                        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+                        BeginDrag(hovered_sector,SECTOR_PART_ZONE, *zone, *target, (mouse_pos-state.cursor_pos)/(state.scale*TILE_SIZE*2.0f)-ImVec2(zone->half_x, zone->half_y));
+                    } break;
+                case SECTOR_PART_SCALE_HYPOT:
+                    switch (zone->shape)
+                    {
+                        case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
+                        case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
+                            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNESW);
+                            break;
+                        case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
+                        case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
+                            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
+                            break;
+                    }
+                    BeginDrag(hovered_sector,SECTOR_PART_SCALE_HYPOT, *zone, *target, (mouse_pos-state.cursor_pos)/(state.scale*TILE_SIZE*2.0f)-ImVec2(zone->half_x, zone->half_y));
+                    break;
+                case SECTOR_PART_SCALE_E:
+                case SECTOR_PART_SCALE_W:
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+                    goto scaleDrag;
+                case SECTOR_PART_SCALE_N:
+                case SECTOR_PART_SCALE_S:
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+                    goto scaleDrag;
+                case SECTOR_PART_SCALE_NE:
+                case SECTOR_PART_SCALE_SW:
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNESW);
+                    goto scaleDrag;
+                case SECTOR_PART_SCALE_NW:
+                case SECTOR_PART_SCALE_SE:
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
+                scaleDrag:
+                    BeginDrag(hovered_sector, hover_part, *zone, *target, ImVec2());
+                    break;
+                case SECTOR_PART_TARGET:
                     ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-                    BeginDrag(hovered_sector,SECTOR_PART_ZONE, *zone, *target, (mouse_pos-state.cursor_pos)/(state.scale*TILE_SIZE*2.0f)-ImVec2(zone->half_x, zone->half_y));
-                } break;
-            case SECTOR_PART_SCALE_HYPOT:
-                switch (zone->shape)
-                {
-                    case ZONE_SHAPE_TRIANGLE_BOTTOM_LEFT:
-                    case ZONE_SHAPE_TRIANGLE_TOP_RIGHT:
-                        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNESW);
-                        break;
-                    case ZONE_SHAPE_TRIANGLE_TOP_LEFT:
-                    case ZONE_SHAPE_TRIANGLE_BOTTOM_RIGHT:
-                        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
-                        break;
-                }
-                BeginDrag(hovered_sector,SECTOR_PART_SCALE_HYPOT, *zone, *target, (mouse_pos-state.cursor_pos)/(state.scale*TILE_SIZE*2.0f)-ImVec2(zone->half_x, zone->half_y));
-                break;
-            case SECTOR_PART_SCALE_E:
-            case SECTOR_PART_SCALE_W:
-                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-                goto scaleDrag;
-            case SECTOR_PART_SCALE_N:
-            case SECTOR_PART_SCALE_S:
-                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-                goto scaleDrag;
-            case SECTOR_PART_SCALE_NE:
-            case SECTOR_PART_SCALE_SW:
-                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNESW);
-                goto scaleDrag;
-            case SECTOR_PART_SCALE_NW:
-            case SECTOR_PART_SCALE_SE:
-                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
-            scaleDrag:
-                BeginDrag(hovered_sector, hover_part, *zone, *target, ImVec2());
-                break;
-            case SECTOR_PART_TARGET:
-                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-                BeginDrag(hovered_sector, hover_part, *zone, *target, ImVec2());
-                break;
+                    BeginDrag(hovered_sector, hover_part, *zone, *target, ImVec2());
+                    break;
+            }
+        }
+        
+        // Reset selected zone when releasing mouse and not dragging
+        if (selected_sector > -1 && selected_part != SECTOR_PART_NONE && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            selected_sector = -1;
+            selected_part = SECTOR_PART_NONE;
         }
     }
 }
@@ -310,8 +353,8 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
         auto zone = t->ai_zones[i];
         auto target = t->ai_targets[0][i];
 
-        bool zone_hovered = (i==hovered_sector && hover_part==SECTOR_PART_ZONE);
-        bool target_hovered = (i==hovered_sector && hover_part == SECTOR_PART_TARGET);
+        bool zone_hovered = (i==hovered_sector && hover_part == SECTOR_PART_ZONE)||(i==selected_sector && selected_part == SECTOR_PART_ZONE);
+        bool target_hovered = (i==hovered_sector && hover_part == SECTOR_PART_TARGET)||(i==selected_sector && selected_part == SECTOR_PART_TARGET);
         
         float border_scale = zone_hovered? HOVER_BORDER_SIZE:1.0f;
         float sel_dist = SEL_DIST * state.scale;
@@ -367,8 +410,7 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
             // Triangle Zone
             ImVec2 vertex, armx, army;
             GetZonePoints(zone, vertex, armx, army);
-            printf("vertex (%f,%f)\n armx (%f,%f)\n army (%f,%f)\n\n",vertex.x, vertex.y,armx.x, armx.y, army.x, army.y);
-
+            
             vertex = state.cursor_pos + vertex * state.scale * TILE_SIZE * 2.0f;
             armx = state.cursor_pos + armx * state.scale * TILE_SIZE * 2.0f;
             army = state.cursor_pos + army * state.scale * TILE_SIZE * 2.0f;

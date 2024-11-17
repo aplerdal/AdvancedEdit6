@@ -51,6 +51,17 @@ void TrackList::update(AppState* as){
 
 static void load_gfx_buffer(AppState* as, int track){
     as->editor_ctx.selected_track = track;
+    while (as->editor_ctx.undo_stack.size() > 0)
+    {
+        delete as->editor_ctx.undo_stack.front();
+        as->editor_ctx.undo_stack.pop_front();
+    }
+    while (as->editor_ctx.redo_stack.size() > 0)
+    {
+        delete as->editor_ctx.redo_stack.front();
+        as->editor_ctx.redo_stack.pop_front();
+    }
+    
     Tileset::generate_cache(as, track);
     Tilemap::generate_cache(as, track);
 }
