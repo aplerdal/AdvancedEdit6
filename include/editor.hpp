@@ -15,14 +15,6 @@
 
 class Command;
 
-inline void PUSH_STACK(std::deque<Command*>& queue, Command* value) {
-    queue.push_back(value);
-    if (queue.size()>32){
-        delete queue.front();
-        queue.pop_front();
-    }
-}
-
 typedef struct _vec2i vec2i;
 
 typedef struct _vec2i {
@@ -120,3 +112,11 @@ public:
     virtual void redo(AppState* as)= 0;
     virtual void undo(AppState* as)= 0;
 };
+
+inline void PUSH_STACK(std::deque<Command*>& queue, Command* value) {
+    queue.push_back(value);
+    if (queue.size()>32){
+        delete queue.front();
+        queue.pop_front();
+    }
+}
