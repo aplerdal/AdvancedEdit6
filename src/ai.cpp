@@ -48,6 +48,20 @@ void AI::update(AppState* as){
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Sector")) {
+            if (ImGui::MenuItem("Create Sector")) {
+                AiZone* ex_zone = new AiZone();
+                ex_zone->half_width = 8;
+                ex_zone->half_height = 8;
+                ex_zone->shape = ZONE_SHAPE_RECTANGLE;
+                AiTarget* ex_target = new AiTarget();
+                ex_target->x = 8;
+                ex_target->y = 8;
+                ex_target->flags = 2;
+                PUSH_STACK(as->editor_ctx.undo_stack, new CreateSectorCmd(as, ex_zone, ex_target));
+            }
+            ImGui::EndMenu();
+        }
         ImGui::EndMenuBar();
     }
     // Draw Track Image
@@ -352,7 +366,6 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
     for (int i = 0; i < t->ai_header->count; i++) {
         auto zone = t->ai_zones[i];
         auto target = t->ai_targets[0][i];
-
         bool zone_hovered = (i==hovered_sector && hover_part == SECTOR_PART_ZONE)||(i==selected_sector && selected_part == SECTOR_PART_ZONE);
         bool target_hovered = (i==hovered_sector && hover_part == SECTOR_PART_TARGET)||(i==selected_sector && selected_part == SECTOR_PART_TARGET);
         
@@ -567,5 +580,28 @@ void AiModifyCmd::undo(AppState *as)
     target->speed = old_target.speed;
 }
 void AiModifyCmd::execute(AppState *as) {
+
+}
+
+CreateSectorCmd::CreateSectorCmd(AppState* as, AiZone* new_zone, AiTarget* new_target) {
+    this->new_target = new_target;
+    this->new_zone = new_zone;
+    redo(as);
+}
+void CreateSectorCmd::execute(AppState* as){
+}
+void CreateSectorCmd::undo(AppState* as) {
+    auto track = &as->game_ctx.tracks[as->editor_ctx.selected_track];
+    track->ai_header->count -= 1;
+    track->ai_zones.pop_back();
+}
+void CreateSectorCmd::redo(AppState* as) {
+    auto track = &as->game_ctx.tracks[as->editor_ctx.selected_track];
+    track->ai_targets[0].push_back(new_target);
+    track->ai_targets[1].push_back(new_target);
+    track->ai_targets[2].push_back(new_target);
+    track->ai_zones.push_back(new_zone);
+    track->ai_header->count += 1;
+    printf("- Appended sector -\n");
 
 }

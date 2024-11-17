@@ -84,3 +84,13 @@ private:
     AiTarget new_target;
     int drag_sector;
 };
+class CreateSectorCmd : public Command {
+public:
+    CreateSectorCmd(AppState* as, AiZone* new_zone, AiTarget* new_target);
+    void execute(AppState* as) override;
+    void redo(AppState* as) override;
+    void undo(AppState* as) override;
+private:
+    AiZone* new_zone;
+    AiTarget* new_target;
+};
