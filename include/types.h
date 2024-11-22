@@ -87,7 +87,6 @@ typedef TrackDefinition* DefinitionTable[TRACK_COUNT];
 
 #pragma pack(1)
 typedef struct TrackHeader{ /*0x100*/
-    //Offset
     /*0x00*/ u8 magic;
     /*0x01*/ b8 compressed_tileset;
     /*0x02*/ u8 padding1;
@@ -108,16 +107,16 @@ typedef struct TrackHeader{ /*0x100*/
     /*0x98*/ o32 finish_line_offset;
     /*0x9C*/ u32 unk1;
     /*0xA0*/ u8 padding5[4];
-    /*0xA8*/ u8 battle_unk1[28];
-    /*0xC4*/ u32 track_routine;
-    /*0xC8*/ o32 minimap_offset;
-    /*0xCC*/ u8 battle_unk2[4];
-    /*0xD0*/ o32 ai_offset;
-    /*0xD4*/ u8 padding6[20];
-    /*0xE8*/ o32 object_gfx_offset;
-    /*0xEC*/ o32 object_pal_offset;
-    /*0xF0*/ u32 reused_object;
-    /*0xF4*/ u8 padding7[16];
+    /*0xA4*/ u8 battle_unk1[28];
+    /*0xC0*/ u32 track_routine;
+    /*0xC4*/ o32 minimap_offset;
+    /*0xC8*/ u8 battle_unk2[4];
+    /*0xCC*/ o32 ai_offset;
+    /*0xD0*/ u8 padding6[20];
+    /*0xE4*/ o32 object_gfx_offset;
+    /*0xE8*/ o32 object_pal_offset;
+    /*0xEC*/ u32 reused_object;
+    /*0xF0*/ u8 padding7[16];
 } TrackHeader;
 
 #pragma pack(1)

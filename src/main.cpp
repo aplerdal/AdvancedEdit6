@@ -42,7 +42,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     as->editor_ctx.scenes = {
         new MenuBar,
         new TrackList,
-        new Tileset,
+        //new Tileset, replace with inspector
         new Tilemap,
         new AI,
     };

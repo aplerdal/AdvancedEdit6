@@ -25,22 +25,14 @@ void MenuBar::update(AppState* as){
         if (ImGui::BeginMenu("File"))
         {
             if (ImGui::MenuItem("Open ROM", "ctrl+o")) {
-                SDL_ShowOpenFileDialog(
-                    OpenFileCallback, 
-                    as, 
-                    as->window, 
-                    gbaFileFilter, 
-                    2, 
-                    NULL, 
-                    false
-                );
+                SDL_ShowOpenFileDialog(OpenFileCallback, as, as->window, gbaFileFilter, 2, NULL, false);
             }
             ImGui::MenuItem("Save ROM", "ctrl+s");
             ImGui::Separator();
             ImGui::MenuItem("Open Project", "ctrl+shift+o");
             ImGui::MenuItem("Save Project", "ctrl+shift+s");
             ImGui::Separator();
-            if (ImGui::MenuItem("Exit", "ctrl+o")){
+            if (ImGui::MenuItem("Exit", "alt+f4")){
                 as->editor_ctx.app_result = SDL_APP_SUCCESS;
             }
             ImGui::EndMenu();
