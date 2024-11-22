@@ -28,7 +28,7 @@ jobs:
       # uses: libsdl-org/setup-sdl@c3f966b577bda4aa30a21fab1875fc89f0151a6b
       uses: libsdl-org/setup-sdl@v1
       with:
-        version: 3-head
+        version: 3-latest
         build-type: Release
 
     - name: Configure CMake
