@@ -39,6 +39,7 @@ public:
     void redo(AppState* as);
     void HandleInput(AppState*as, TrackContext* t);
     void SectorDraw(ImDrawList *dl, TrackContext *t);
+    void CreateSector(AppState *as);
     void BeginDrag(int sector, SectorPart part, AiZone old_zone, AiTarget old_target, ImVec2 offset);
     std::string get_name() override;
 

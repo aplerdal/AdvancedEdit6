@@ -50,15 +50,7 @@ void AI::update(AppState* as){
         }
         if (ImGui::BeginMenu("Sector")) {
             if (ImGui::MenuItem("Create Sector")) {
-                AiZone* ex_zone = new AiZone();
-                ex_zone->half_width = 8;
-                ex_zone->half_height = 8;
-                ex_zone->shape = ZONE_SHAPE_RECTANGLE;
-                AiTarget* ex_target = new AiTarget();
-                ex_target->x = 8;
-                ex_target->y = 8;
-                ex_target->flags = 2;
-                PUSH_STACK(as->editor_ctx.undo_stack, new CreateSectorCmd(as, ex_zone, ex_target));
+                CreateSector(as);
             }
             ImGui::EndMenu();
         }
@@ -99,6 +91,10 @@ void AI::update(AppState* as){
 }
 void AI::inspector(AppState* as) {
     ImGui::Text("AI Inspector");
+    ImGui::Separator();
+    if (ImGui::Button("Create Sector")) {
+        CreateSector(as);
+    }
     ImGui::Separator();
     if (selected_sector > -1 && selected_part != SECTOR_PART_NONE) {
         TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
@@ -244,23 +240,23 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
                 case SECTOR_PART_SCALE_NW:
                     delta = zone->half_x - clampCast<uint16_t>(mouse_rel.x / 2.0f);
                     zone->half_x -= delta;
-                    zone->half_width += delta-1;
+                    zone->half_width += delta;
 
                     delta = zone->half_y - clampCast<uint16_t>(mouse_rel.y / 2.0f);
                     zone->half_y -= delta;
-                    zone->half_height += delta-1;
+                    zone->half_height += delta;
                     break;
                 case SECTOR_PART_SCALE_NE:
                     zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x) - 1;
 
                     delta = zone->half_y - clampCast<uint16_t>(mouse_rel.y / 2.0f);
                     zone->half_y -= delta;
-                    zone->half_height += delta-1;
+                    zone->half_height += delta;
                     break;
                 case SECTOR_PART_SCALE_SW:
                     delta = zone->half_x - clampCast<uint16_t>(mouse_rel.x / 2.0f);
                     zone->half_x -= delta;
-                    zone->half_width += delta - 1;
+                    zone->half_width += delta;
 
                     zone->half_height = clampCast<uint16_t>((mouse_rel.y / 2.0f)-zone->half_y) - 1;
                     break;
@@ -272,7 +268,7 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
                 case SECTOR_PART_SCALE_E:
                     delta = zone->half_x - clampCast<uint16_t>(mouse_rel.x / 2.0f);
                     zone->half_x -= delta;
-                    zone->half_width += delta - 1;
+                    zone->half_width += delta;
                     break;
                 case SECTOR_PART_SCALE_W:
                     zone->half_width = clampCast<uint16_t>((mouse_rel.x / 2.0f) - zone->half_x) - 1;
@@ -283,7 +279,7 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
                 case SECTOR_PART_SCALE_N:
                     delta = zone->half_y - clampCast<uint16_t>(mouse_rel.y / 2.0f);
                     zone->half_y -= delta;
-                    zone->half_height += delta - 1;
+                    zone->half_height += delta;
                     break;
                 case SECTOR_PART_SCALE_HYPOT:
                     zone->half_width = clampCast<uint16_t>(abs((mouse_rel.x / 2.0f) - zone->half_x)); // TODO Correct triangle type offsets
@@ -452,6 +448,17 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
             }
         }
     }
+}
+void AI::CreateSector(AppState* as) {
+    AiZone* ex_zone = new AiZone();
+    ex_zone->half_width = 8;
+    ex_zone->half_height = 8;
+    ex_zone->shape = ZONE_SHAPE_RECTANGLE;
+    AiTarget* ex_target = new AiTarget();
+    ex_target->x = 8;
+    ex_target->y = 8;
+    ex_target->flags = 2;
+    PUSH_STACK(as->editor_ctx.undo_stack, new CreateSectorCmd(as, ex_zone, ex_target));
 }
 
 void AI::BeginDrag(int sector, SectorPart part, AiZone old_zone, AiTarget old_target, ImVec2 offset){
