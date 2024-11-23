@@ -75,18 +75,18 @@ typedef struct {
     p32 locked_palette;
     p32 track_name_gfx;
     u32 unused_lap_count; // Can be turned useable via a patch, but unused in base game.
-} TrackDefinition;
+} track_definition_t;
 
 #define DEFINITION_POINTER_TABLE 0xe7ff0
 // Should not be directly casted
-typedef TrackDefinition* DefinitionTable[TRACK_COUNT];
+typedef track_definition_t* DefinitionTable[TRACK_COUNT];
 
 #define TRACK_FLAGS_SPLIT_TILESET (1 << 0)
 #define TRACK_FLAGS_SPLIT_LAYOUT  (1 << 1)
 #define TRACK_FLAGS_SPLIT_OBJECTS (1 << 2)
 
 #pragma pack(1)
-typedef struct TrackHeader{ /*0x100*/
+typedef struct{ /*size == 0x100*/
     /*0x00*/ u8 magic;
     /*0x01*/ b8 compressed_tileset;
     /*0x02*/ u8 padding1;
@@ -117,14 +117,14 @@ typedef struct TrackHeader{ /*0x100*/
     /*0xE8*/ o32 object_pal_offset;
     /*0xEC*/ u32 reused_object;
     /*0xF0*/ u8 padding7[16];
-} TrackHeader;
+} track_header_t;
 
 #pragma pack(1)
 typedef struct{
     u8 count;
     o16 zones_offset;
     o16 targets_offset;
-} AiHeader;
+} ai_header_t;
 
 #define TARGET_FLAGS_INTERSECTION 1<<7
 #define TARGET_MASK_FLAGS 0xF0
@@ -138,9 +138,9 @@ typedef struct{
         u8 flags;
     };
     u8 padding[3];
-} AiTarget;
+} ai_target_t;
 
-enum ZoneShape {
+enum zone_shape {
     ZONE_SHAPE_RECTANGLE,
     ZONE_SHAPE_TRIANGLE_TOP_LEFT,
     ZONE_SHAPE_TRIANGLE_TOP_RIGHT,
@@ -157,7 +157,7 @@ typedef struct{
     u16 half_width;
     u16 half_height;
     u8 padding[3];
-} AiZone;
+} ai_zone_t;
 
 
 
@@ -166,7 +166,7 @@ typedef struct{
     u8 x;
     u8 y;
     u8 zone;
-} Object;
+} track_object_t;
 
 #ifdef _cplusplus
 }

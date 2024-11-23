@@ -97,18 +97,18 @@ static void SDLCALL OpenFileCallback(void* userdata, const char* const* filelist
     as->game_ctx.eof = as->editor_ctx.file.data() + as->editor_ctx.file.size();
     for (int t = 0; t < TRACK_COUNT; t++) {
         TrackContext& track = as->game_ctx.tracks[t];
-        track.track_header = (TrackHeader*)((uint8_t*)as->game_ctx.track_table + as->game_ctx.track_table->track_offsets[t]);
-        track.definition_table = (TrackDefinition*)(&as->editor_ctx.file.data()[DEFINITION_TABLE_ADDRESS+t*sizeof(TrackDefinition)]);
-        track.ai_header = (AiHeader*)((uint8_t*)track.track_header + track.track_header->ai_offset);
+        track.track_header = (track_header_t*)((uint8_t*)as->game_ctx.track_table + as->game_ctx.track_table->track_offsets[t]);
+        track.definition_table = (track_definition_t*)(&as->editor_ctx.file.data()[DEFINITION_TABLE_ADDRESS+t*sizeof(track_definition_t)]);
+        track.ai_header = (ai_header_t*)((uint8_t*)track.track_header + track.track_header->ai_offset);
         track.ai_zones.resize(track.ai_header->count);
         for (int zone_group = 0; zone_group < 3; zone_group++){
             track.ai_targets[zone_group].resize(track.ai_header->count);
         }
         for (int i = 0; i < track.ai_header->count; i++) {
-            track.ai_zones[i] = ((AiZone*)((uint8_t*)track.ai_header + track.ai_header->zones_offset))+i;
+            track.ai_zones[i] = ((ai_zone_t*)((uint8_t*)track.ai_header + track.ai_header->zones_offset))+i;
             auto z = track.ai_zones[i];
             for (int zone_group = 0; zone_group < 3; zone_group++){
-                track.ai_targets[zone_group][i] = ((AiTarget*)((uint8_t*)track.ai_header + track.ai_header->targets_offset))+i+zone_group*track.ai_header->count;
+                track.ai_targets[zone_group][i] = ((ai_target_t*)((uint8_t*)track.ai_header + track.ai_header->targets_offset))+i+zone_group*track.ai_header->count;
             }
         }
     }

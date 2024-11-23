@@ -6,6 +6,12 @@
 #define SEL_DIST 5.0f
 #define HOVER_BORDER_SIZE 3.0f
 
+static const SDL_DialogFileFilter aiFileFilter[] = {
+    { "Super Circuit AI File",  "scai" },
+    { "Bin File",  "bin" },
+    { "All files",   "*" }
+};
+
 // Organized by Priority, highest index is highest priority.
 enum SectorPart{
     SECTOR_PART_NONE,
@@ -37,10 +43,11 @@ public:
     void DrawLayout(AppState* as);
     void undo(AppState* as);
     void redo(AppState* as);
-    void HandleInput(AppState*as, TrackContext* t);
-    void SectorDraw(ImDrawList *dl, TrackContext *t);
-    void CreateSector(AppState *as);
-    void BeginDrag(int sector, SectorPart part, AiZone old_zone, AiTarget old_target, ImVec2 offset);
+    void HandleInput(AppState* as, TrackContext* t);
+    void SectorDraw(ImDrawList* dl, TrackContext* t);
+    void CreateSector(AppState* as);
+    void BeginDrag(int sector, SectorPart part, ai_zone_t old_zone, ai_target_t old_target, ImVec2 offset);
+    std::vector<uint8_t> Save(AppState* as);
     std::string get_name() override;
 
 private:
@@ -56,14 +63,16 @@ private:
     bool dragging = false;
     SectorPart drag_part = SECTOR_PART_NONE;
     int drag_sector = -1;
-    AiZone old_zone;
-    AiTarget old_target;
+    ai_zone_t old_zone;
+    ai_target_t old_target;
     ImVec2 drag_offset = ImVec2();
 };
 
-static void GetZonePoints(AiZone* zone, ImVec2& vertex, ImVec2& armx, ImVec2& army);
-static void DrawSector(ImDrawList* dl, MapState state, AiZone* zone, AiTarget* target);
-static void DrawTarget(ImDrawList* dl, MapState state, AiZone* zone, AiTarget* t);
+static void SDLCALL SaveAIDialog(void* userdata, const char* const* filelist, int filter);
+
+static void GetZonePoints(ai_zone_t* zone, ImVec2& vertex, ImVec2& armx, ImVec2& army);
+static void DrawSector(ImDrawList* dl, MapState state, ai_zone_t* zone, ai_target_t* target);
+static void DrawTarget(ImDrawList* dl, MapState state, ai_zone_t* zone, ai_target_t* t);
 
 static bool PointInTriangle(ImVec2 point, ImVec2 vertex, ImVec2 armx, ImVec2 army);
 static bool PointInCircle(ImVec2 point, ImVec2 position, float radius);
@@ -74,24 +83,24 @@ template<typename T> T clampCast(float value);
 
 class AiModifyCmd : public Command {
 public:
-    AiModifyCmd(AppState* as, int drag_sector, AiZone old_zone, AiZone new_zone, AiTarget old_target, AiTarget new_target);
+    AiModifyCmd(AppState* as, int drag_sector, ai_zone_t old_zone, ai_zone_t new_zone, ai_target_t old_target, ai_target_t new_target);
     void execute(AppState* as) override;
     void redo(AppState* as) override;
     void undo(AppState* as) override;
 private:
-    AiZone old_zone;
-    AiZone new_zone;
-    AiTarget old_target;
-    AiTarget new_target;
+    ai_zone_t old_zone;
+    ai_zone_t new_zone;
+    ai_target_t old_target;
+    ai_target_t new_target;
     int drag_sector;
 };
 class CreateSectorCmd : public Command {
 public:
-    CreateSectorCmd(AppState* as, AiZone* new_zone, AiTarget* new_target);
+    CreateSectorCmd(AppState* as, ai_zone_t* new_zone, ai_target_t* new_target);
     void execute(AppState* as) override;
     void redo(AppState* as) override;
     void undo(AppState* as) override;
 private:
-    AiZone* new_zone;
-    AiTarget* new_target;
+    ai_zone_t* new_zone;
+    ai_target_t* new_target;
 };

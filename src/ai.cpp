@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "tileset.hpp"
+#include <menubar.hpp>
 
 std::string AI::get_name(){
     return "AI";
@@ -32,10 +33,9 @@ void AI::update(AppState* as){
     }
     // AI Menu Bar
     if (ImGui::BeginMenuBar()){
-        if (ImGui::BeginMenu("View")){
-            if (ImGui::MenuItem("Reset View")){
-                state.translation = ImVec2();
-                state.scale = 1.0f;
+        if (ImGui::BeginMenu("File")){
+            if (ImGui::MenuItem("Save AI")){
+                SDL_ShowSaveFileDialog(SaveAIDialog, (void*)as, as->window, aiFileFilter, 3, NULL);
             }
             ImGui::EndMenu();
         }
@@ -48,9 +48,10 @@ void AI::update(AppState* as){
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Sector")) {
-            if (ImGui::MenuItem("Create Sector")) {
-                CreateSector(as);
+        if (ImGui::BeginMenu("View")){
+            if (ImGui::MenuItem("Reset View")){
+                state.translation = ImVec2();
+                state.scale = 1.0f;
             }
             ImGui::EndMenu();
         }
@@ -450,18 +451,18 @@ void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
     }
 }
 void AI::CreateSector(AppState* as) {
-    AiZone* ex_zone = new AiZone();
+    ai_zone_t* ex_zone = new ai_zone_t();
     ex_zone->half_width = 8;
     ex_zone->half_height = 8;
     ex_zone->shape = ZONE_SHAPE_RECTANGLE;
-    AiTarget* ex_target = new AiTarget();
+    ai_target_t* ex_target = new ai_target_t();
     ex_target->x = 8;
     ex_target->y = 8;
     ex_target->flags = 2;
     PUSH_STACK(as->editor_ctx.undo_stack, new CreateSectorCmd(as, ex_zone, ex_target));
 }
 
-void AI::BeginDrag(int sector, SectorPart part, AiZone old_zone, AiTarget old_target, ImVec2 offset){
+void AI::BeginDrag(int sector, SectorPart part, ai_zone_t old_zone, ai_target_t old_target, ImVec2 offset){
     if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
         if (!dragging) {
             dragging = true;
@@ -474,7 +475,41 @@ void AI::BeginDrag(int sector, SectorPart part, AiZone old_zone, AiTarget old_ta
     }
 }
 
-static void GetZonePoints(AiZone* zone, ImVec2& vertex, ImVec2& armx, ImVec2& army) {
+static void SDLCALL SaveAIDialog(void* userdata, const char* const* filelist, int filter) {
+    if (!filelist) {
+        SDL_Log("An error occured: %s", SDL_GetError());
+        return;
+    } else if (!*filelist) {
+        SDL_Log("The user did not select any file.");
+        SDL_Log("Most likely, the dialog was canceled.");
+        return;
+    }
+    AppState* as = (AppState*)userdata;
+    TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
+    int targets_len = sizeof(ai_target_t)*t->ai_header->count;
+    int zones_len = (sizeof(ai_zone_t)*t->ai_header->count + 3) & ~0x03;
+
+    std::vector<uint8_t> buffer(sizeof(ai_header_t) + zones_len + targets_len*3);
+
+    t->ai_header->targets_offset = sizeof(ai_header_t) + zones_len;
+    t->ai_header->zones_offset = sizeof(ai_header_t);
+
+    memcpy(buffer.data(), t->ai_header, sizeof(ai_header_t));
+    for(int i = 0; i < t->ai_header->count; i++) {
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_zone_t), t->ai_zones[i], sizeof(ai_zone_t));
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*0, t->ai_targets[0][i], sizeof(ai_target_t));
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*1, t->ai_targets[1][i], sizeof(ai_target_t));
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*2, t->ai_targets[2][i], sizeof(ai_target_t));
+        
+    }
+    if (std::FILE* file = std::fopen(*filelist, "wb"))
+    {
+        std::fwrite(buffer.data(), sizeof(uint8_t), buffer.size(), file);
+        std::fclose(file);
+    }
+}
+
+static void GetZonePoints(ai_zone_t* zone, ImVec2& vertex, ImVec2& armx, ImVec2& army) {
     switch (zone->shape)
     {
     #pragma warning(disable : 244)
@@ -548,7 +583,7 @@ void AI::redo(AppState *as)
     }
 }
 
-AiModifyCmd::AiModifyCmd(AppState* as, int drag_sector, AiZone old_zone, AiZone new_zone, AiTarget old_target, AiTarget new_target){
+AiModifyCmd::AiModifyCmd(AppState* as, int drag_sector, ai_zone_t old_zone, ai_zone_t new_zone, ai_target_t old_target, ai_target_t new_target){
     this->old_zone = old_zone;
     this->new_zone = new_zone;
     this->old_target = old_target;
@@ -590,7 +625,7 @@ void AiModifyCmd::execute(AppState *as) {
 
 }
 
-CreateSectorCmd::CreateSectorCmd(AppState* as, AiZone* new_zone, AiTarget* new_target) {
+CreateSectorCmd::CreateSectorCmd(AppState* as, ai_zone_t* new_zone, ai_target_t* new_target) {
     this->new_target = new_target;
     this->new_zone = new_zone;
     redo(as);

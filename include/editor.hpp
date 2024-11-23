@@ -43,11 +43,11 @@ typedef struct _vec2{
 class Scene;
 
 typedef struct track {
-    TrackDefinition* definition_table;
-    TrackHeader* track_header;
-    AiHeader* ai_header;
-    std::vector<AiZone*> ai_zones;
-    std::array<std::vector<AiTarget*>,3> ai_targets;
+    track_definition_t* definition_table;
+    track_header_t* track_header;
+    ai_header_t* ai_header;
+    std::vector<ai_zone_t*> ai_zones;
+    std::array<std::vector<ai_target_t*>,3> ai_targets;
 } TrackContext;
 
 typedef struct gameContext {

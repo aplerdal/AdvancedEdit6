@@ -203,7 +203,7 @@ void Tilemap::draw_tile(AppState *as, int x, int y, int tile)
 void Tilemap::generate_cache(AppState* as, int track) {
     generate_tile_cache(as, track);
     
-    TrackHeader* header = as->game_ctx.tracks[track].track_header;
+    track_header_t* header = as->game_ctx.tracks[track].track_header;
     uint8_t* base = (uint8_t*)header;
     uint8_t* layout = (uint8_t*)(base + header->layout_offset);
     int track_width = header->width * TILEMAP_UNIT;
@@ -277,7 +277,7 @@ void Tilemap::regen_map_texture(AppState* as){
     SDL_SetRenderTarget(as->renderer, NULL);
 }
 void Tilemap::generate_tile_cache(AppState* as, int track){
-    TrackHeader* header = as->game_ctx.tracks[track].track_header;
+    track_header_t* header = as->game_ctx.tracks[track].track_header;
     uint8_t* base = (uint8_t*)header;
 
     std::vector<uint8_t> raw_tiles(4 * 0x1000);
@@ -286,7 +286,7 @@ void Tilemap::generate_tile_cache(AppState* as, int track){
     uint32_t split_tileset = header->track_flags & TRACK_FLAGS_SPLIT_TILESET;
     if (header->reused_tileset != 0){
         int reused_track = (int)(uint8_t)((uint8_t)track + (uint8_t)header->reused_tileset);
-        TrackHeader* reused_header = as->game_ctx.tracks[reused_track].track_header;
+        track_header_t* reused_header = as->game_ctx.tracks[reused_track].track_header;
         uint8_t* reused_base = (uint8_t*)reused_header;
         tile_header = (uint8_t*)(reused_base + reused_header->tileset_offset);
         split_tileset = reused_header->track_flags & TRACK_FLAGS_SPLIT_TILESET;
