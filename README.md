@@ -14,7 +14,7 @@ For support, ask in `#antimattur` in the [Mksc Hacking Discord](https://discord.
 - [ ] Quick track testing using savestates
 - [x] Techical documentation ([Mksc RE](https://github.com/aplerdal/MkscRE))
 ## Building
-The linux build instructions are not fully tested, but should work.
+I don't update these instructions often atm. If you want to build these may not always work.
 
 Clone or download this repositiory into a local directory including submodules using 
 ```
