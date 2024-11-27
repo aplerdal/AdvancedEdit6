@@ -9,7 +9,7 @@ For support, ask in `#antimattur` in the [Mksc Hacking Discord](https://discord.
 - [x] Editing Tilemaps
 - [ ] Editing Palettes
 - [ ] Editing tilesets
-- [ ] Editing AI
+- [x] Editing AI
 - [ ] Saving modified game
 - [ ] Quick track testing using savestates
 - [x] Techical documentation ([Mksc RE](https://github.com/aplerdal/MkscRE))
