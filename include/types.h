@@ -128,7 +128,7 @@ typedef struct{
 
 #define TARGET_FLAGS_INTERSECTION 1<<7
 #define TARGET_MASK_FLAGS 0xF0
-#define TARGET_MASK_SPEED 0x0F
+#define TARGET_MASK_SPEED 0x03
 #pragma pack(1)
 typedef struct{
     u16 x;

@@ -104,3 +104,14 @@ private:
     ai_zone_t* new_zone;
     ai_target_t* new_target;
 };
+class DeleteSectorCmd : public Command {
+public:
+    DeleteSectorCmd(AppState* as, int index);
+    void execute(AppState* as) override;
+    void redo(AppState* as) override;
+    void undo(AppState* as) override;
+private:
+    ai_zone_t* zone;
+    ai_target_t* target;
+    int index;
+};

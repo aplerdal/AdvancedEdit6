@@ -3,6 +3,7 @@
 #include "editor.hpp"
 #include <limits>
 #include <cmath>
+#include <vector>
 
 #include "tileset.hpp"
 #include <menubar.hpp>
@@ -99,24 +100,19 @@ void AI::inspector(AppState* as) {
     ImGui::Separator();
     if (selected_sector > -1 && selected_part != SECTOR_PART_NONE) {
         TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
-        if (selected_part == SECTOR_PART_ZONE) {
-            auto zone = t->ai_zones[selected_sector];
-            ImGui::Text("Zone %d:", selected_sector);
-            int ishape = zone->shape;
-            ImGui::Combo("Shape", &ishape, "Rectangle\0Triangle Top Left\0Triangle Top Right\0Triangle Bottom Right\0Triangle Bottom Left\0");
-            zone->shape = (uint8_t)ishape;
-        } else if (selected_part == SECTOR_PART_TARGET) {
-            auto target = t->ai_targets[0][selected_sector];
-            ImGui::Text("Target %d:", selected_sector);
-            int ispeed = target->speed & TARGET_MASK_SPEED;
-            ImGui::InputInt("Speed", &ispeed);
-            target->speed = (target->speed & TARGET_MASK_FLAGS) | ((uint8_t)ispeed&TARGET_MASK_SPEED);
-            uint32_t uflags = (uint32_t)target->flags&TARGET_MASK_FLAGS;
-            ImGui::CheckboxFlags("Intersection?", &uflags, TARGET_FLAGS_INTERSECTION);
-            target->flags = ((uint8_t)(uflags&TARGET_MASK_FLAGS)) | (target->flags&TARGET_MASK_SPEED);
-        } else {
-            ImGui::Text("You shouldn't be seeing this...");
-        }
+        auto zone = t->ai_zones[selected_sector];
+        ImGui::Text("Sector %d:", selected_sector);
+        int ishape = zone->shape;
+        ImGui::Combo("Shape", &ishape, "Rectangle\0Triangle Top Left\0Triangle Top Right\0Triangle Bottom Right\0Triangle Bottom Left\0");
+        zone->shape = (uint8_t)ishape;
+        
+        auto target = t->ai_targets[0][selected_sector];
+        int ispeed = target->speed & TARGET_MASK_SPEED;
+        ImGui::InputInt("Speed", &ispeed);
+        target->speed = (target->speed & TARGET_MASK_FLAGS) | ((uint8_t)ispeed&TARGET_MASK_SPEED);
+        uint32_t uflags = (uint32_t)target->flags&TARGET_MASK_FLAGS;
+        ImGui::CheckboxFlags("Intersection?", &uflags, TARGET_FLAGS_INTERSECTION);
+        target->flags = ((uint8_t)(uflags&TARGET_MASK_FLAGS)) | (target->flags&TARGET_MASK_SPEED);
     }
 }
 void AI::DrawLayout(AppState *as){
@@ -353,6 +349,12 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
         if (selected_sector > -1 && selected_part != SECTOR_PART_NONE && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
             selected_sector = -1;
             selected_part = SECTOR_PART_NONE;
+        }
+    }
+
+    if (selected_sector > -1 && selected_part != SECTOR_PART_NONE) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Delete)) {
+            PUSH_STACK(as->editor_ctx.undo_stack, new DeleteSectorCmd(as, selected_sector));
         }
     }
 }
@@ -644,6 +646,29 @@ void CreateSectorCmd::redo(AppState* as) {
     track->ai_targets[2].push_back(new_target);
     track->ai_zones.push_back(new_zone);
     track->ai_header->count += 1;
-    printf("- Appended sector -\n");
+}
 
+DeleteSectorCmd::DeleteSectorCmd(AppState* as, int index) {
+    this->index = index;
+    this->zone = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_zones[index];
+    this->target = as->game_ctx.tracks[as->editor_ctx.selected_track].ai_targets[0][index];
+    redo(as);
+}
+void DeleteSectorCmd::execute(AppState* as){
+}
+void DeleteSectorCmd::undo(AppState* as) {
+    auto t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
+    t->ai_header->count+=1;
+    t->ai_targets[0].insert(t->ai_targets[0].begin()+index, target);
+    t->ai_targets[1].insert(t->ai_targets[1].begin()+index, target);
+    t->ai_targets[2].insert(t->ai_targets[2].begin()+index, target);
+    t->ai_zones.insert(t->ai_zones.begin()+index, zone);
+}
+void DeleteSectorCmd::redo(AppState* as) {
+    auto t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
+    t->ai_header->count-=1;
+    t->ai_targets[0].erase(t->ai_targets[0].begin()+index);
+    t->ai_targets[1].erase(t->ai_targets[1].begin()+index);
+    t->ai_targets[2].erase(t->ai_targets[2].begin()+index);
+    t->ai_zones.erase(t->ai_zones.begin()+index);
 }
