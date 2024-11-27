@@ -498,8 +498,8 @@ static void SDLCALL SaveAIDialog(void* userdata, const char* const* filelist, in
     for(int i = 0; i < t->ai_header->count; i++) {
         memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_zone_t), t->ai_zones[i], sizeof(ai_zone_t));
         memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*0, t->ai_targets[0][i], sizeof(ai_target_t));
-        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*1, t->ai_targets[1][i], sizeof(ai_target_t));
-        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*2, t->ai_targets[2][i], sizeof(ai_target_t));
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*1, t->ai_targets[0][i], sizeof(ai_target_t));
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*2, t->ai_targets[0][i], sizeof(ai_target_t));
         
     }
     if (std::FILE* file = std::fopen(*filelist, "wb"))

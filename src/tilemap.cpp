@@ -163,10 +163,7 @@ void Tilemap::inspector(AppState* as) {
     }
     ImGui::SameLine();
     if (ImGui::Button("Export")) {
-        if (ImGui::BeginPopupModal("Unimplemented")) {
-            ImGui::Text("Haven't added this yet. If it is 2025 complain to me about it");
-            ImGui::EndPopup();
-        }
+        SDL_ShowSaveFileDialog(SaveTilesetCallback, as, as->window, imageFilter, 2, NULL);
     }
 }
 void Tilemap::undo(AppState *as)
@@ -305,9 +302,9 @@ void Tilemap::generate_tile_cache(AppState* as, int track){
         std::vector v = LZSS::lz10_decode(data,true);
         std::copy(v.begin(), v.end(), raw_tiles.data());
     }
-    SDL_Palette* palette = SDL_CreatePalette(256);
-    SDL_Color pal_buf[256];
-    for (int i = 0; i < 256; i++) {
+    SDL_Palette* palette = SDL_CreatePalette(64);
+    SDL_Color pal_buf[64];
+    for (int i = 0; i < 64; i++) {
         pal_buf[i] = SDL_Color{
             (uint8_t)((tile_pal[i]<<3)&0b11111000),
             (uint8_t)((tile_pal[i]>>2)&0b11111000),
@@ -315,28 +312,30 @@ void Tilemap::generate_tile_cache(AppState* as, int track){
             0xff
         };
     }
-    SDL_SetPaletteColors(palette, pal_buf, 0, 256);
+    SDL_SetPaletteColors(palette, pal_buf, 0, 64);
     as->editor_ctx.palette = palette;
 
-    SDL_Surface* buf_surface = SDL_CreateSurface(16*TILE_SIZE, 16*TILE_SIZE, SDL_PIXELFORMAT_INDEX8);
-    SDL_SetSurfacePalette(buf_surface, palette);
+    SDL_DestroySurface(as->editor_ctx.tile_surface);
+    as->editor_ctx.tile_surface = SDL_CreateSurface(16*TILE_SIZE, 16*TILE_SIZE, SDL_PIXELFORMAT_INDEX8);
+
+    SDL_SetSurfacePalette(as->editor_ctx.tile_surface, palette);
     for (int y = 0; y<16; y++){
         for (int x = 0; x<16; x++){
             SDL_Surface* temp = Graphics::decode_8bpp(&raw_tiles.data()[(y*16+x)*64],palette);
             SDL_Rect dest = { x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE };
-            SDL_BlitSurface(temp, NULL, buf_surface, &dest);
+            SDL_BlitSurface(temp, NULL, as->editor_ctx.tile_surface, &dest);
             SDL_DestroySurface(temp);
         }
     }
     if (as->editor_ctx.tile_buffer != nullptr) {
         SDL_DestroyTexture(as->editor_ctx.tile_buffer);
     }
-    as->editor_ctx.tile_buffer = SDL_CreateTextureFromSurface(as->renderer, buf_surface);
+
+    as->editor_ctx.tile_buffer = SDL_CreateTextureFromSurface(as->renderer, as->editor_ctx.tile_surface);
     if (!as->editor_ctx.tile_buffer) {
         ImGui::DebugLog("ERROR: Failed to create texture from surface for tileset: %s\n", SDL_GetError());
     }
     SDL_SetTextureScaleMode(as->editor_ctx.tile_buffer, SDL_SCALEMODE_NEAREST);
-    SDL_DestroySurface(buf_surface);
 }
 
 void ViewTool::update(AppState *as, MapState& ms)
@@ -446,6 +445,19 @@ void DrawTool::update(AppState *as, MapState& ms)
     }
 }
 
+static void SDLCALL SaveTilesetCallback(void* userdata, const char* const* filelist, int filter) {
+    if (!filelist) {
+        SDL_Log("An error occured: %s", SDL_GetError());
+        return;
+    } else if (!*filelist) {
+        SDL_Log("The user did not select any file.");
+        SDL_Log("Most likely, the dialog was canceled.");
+        return;
+    }
+    AppState* as = (AppState*)userdata;
+    SDL_SaveBMP(as->editor_ctx.tile_surface, *filelist);
+
+}
 static void SDLCALL OpenTilesetCallback(void* userdata, const char* const* filelist, int filter) {
     if (!filelist) {
         SDL_Log("An error occured: %s", SDL_GetError());
@@ -459,28 +471,10 @@ static void SDLCALL OpenTilesetCallback(void* userdata, const char* const* filel
     SDL_Surface* original = SDL_LoadBMP(*filelist);
     if (!original) { SDL_Log("Error loading image"); SDL_DestroySurface(original); return; }
     
-    if (original->format == SDL_PIXELFORMAT_INDEX8) {
-
-    } else {
-        SDL_Surface* paletted = SDL_CreateSurface(128, 128, SDL_PIXELFORMAT_INDEX8);
-
-        SDL_Color palette[256];
-        int idx = 0;
-        for (int i = 0; i < 128*128; i++) {
-            SDL_Color col;
-            SDL_ReadSurfacePixel(original, i%128, i%128, &col.r, &col.g, &col.b, &col.a);
-            bool exists = false;
-            for (int j = 0; j < idx; j++) {
-                if (palette[j].r == col.r && palette[j].g == col.g && palette[j].b == col.b) {
-                    exists = true;
-                    break;
-                }
-            }
-            if (!exists) {
-                palette[idx] = col;
-                idx++;
-            }
-        }
+    if (original->format != SDL_PIXELFORMAT_INDEX8) {
+        SDL_Log("Image must be in 8bpp paletted mode. This is usually done by modifying an exported tileset.");
+        SDL_DestroySurface(original);
+        return;
     }
-
+    
 }

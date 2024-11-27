@@ -71,9 +71,10 @@ typedef struct editorContext {
     std::deque<Command*> undo_stack;
     std::deque<Command*> redo_stack;
 
-    SDL_Palette* palette;
-    SDL_Texture* tile_buffer;
-    SDL_Texture* map_buffer;
+    SDL_Palette* palette = nullptr;
+    SDL_Texture* tile_buffer = nullptr;
+    SDL_Surface* tile_surface = nullptr;
+    SDL_Texture* map_buffer = nullptr;
     std::vector<uint8_t> layout_buffer;
 } EditorContext;
 

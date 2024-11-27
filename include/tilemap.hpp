@@ -14,7 +14,7 @@
 #define TILEMAP_UNIT 128
 
 static const SDL_DialogFileFilter imageFilter[] = {
-    { "All images",  "bmp" },
+    { "Bitmap files (*.bmp)",  "bmp" },
     { "All files",   "*" }
 };
 
@@ -39,3 +39,4 @@ private:
 };
 
 static void SDLCALL OpenTilesetCallback(void* userdata, const char* const* filelist, int filter);
+static void SDLCALL SaveTilesetCallback(void* userdata, const char* const* filelist, int filter);
