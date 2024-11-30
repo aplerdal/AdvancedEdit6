@@ -62,7 +62,7 @@ void AI::update(AppState* as){
     state.win_pos = ImGui::GetWindowPos();
     state.win_size = ImGui::GetWindowSize();
     state.cursor_pos = ImVec2(state.win_pos.x + state.translation.x, state.win_pos.y + state.translation.y);
-    state.track_size = ImVec2((as->game_ctx.track_width*TILE_SIZE*state.scale), (as->game_ctx.track_height*TILE_SIZE*state.scale));
+    state.track_size = ImVec2((as->editor_ctx.track_width*TILE_SIZE*state.scale), (as->editor_ctx.track_height*TILE_SIZE*state.scale));
     
     ImGui::SetCursorScreenPos(state.cursor_pos);
     ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(state.track_size.x,state.track_size.y));

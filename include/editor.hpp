@@ -52,7 +52,6 @@ typedef struct track {
 
 typedef struct gameContext {
     uint8_t* eof;
-    int track_width, track_height;
     TrackTable* track_table;
     std::array<TrackContext, TRACK_COUNT> tracks;
 } GameContext;
@@ -62,6 +61,7 @@ typedef struct editorContext {
     SDL_AppResult app_result = SDL_APP_CONTINUE;
     int selected_track = -1;
     int selected_tile = -1;
+    int track_width, track_height;
     std::vector<uint8_t> file;
     bool file_open = false;
     std::string file_name;

@@ -71,7 +71,7 @@ void Tilemap::update(AppState* as){
     state.win_pos = ImGui::GetWindowPos();
     state.win_size = ImGui::GetWindowSize();
     state.cursor_pos = ImVec2(state.win_pos.x + state.translation.x, state.win_pos.y + state.translation.y);
-    state.track_size = ImVec2((as->game_ctx.track_width*TILE_SIZE*state.scale), (as->game_ctx.track_height*TILE_SIZE*state.scale));
+    state.track_size = ImVec2((as->editor_ctx.track_width*TILE_SIZE*state.scale), (as->editor_ctx.track_height*TILE_SIZE*state.scale));
     
     ImGui::SetCursorScreenPos(state.cursor_pos);
     ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(state.track_size.x,state.track_size.y));
@@ -209,8 +209,8 @@ void Tilemap::generate_cache(AppState* as, int track) {
     int track_width = header->width * TILEMAP_UNIT;
     int track_height = header->height * TILEMAP_UNIT;
 
-    as->game_ctx.track_width = track_width;
-    as->game_ctx.track_height = track_height;
+    as->editor_ctx.track_width = track_width;
+    as->editor_ctx.track_height = track_height;
 
     std::vector<uint8_t> layout_buffer(track_width*track_height);
     if (header->track_flags & TRACK_FLAGS_SPLIT_LAYOUT) {
@@ -231,8 +231,8 @@ void Tilemap::generate_cache(AppState* as, int track) {
     regen_map_texture(as);
 }
 void Tilemap::regen_map_texture(AppState* as){
-    int track_width = as->game_ctx.track_width;
-    int track_height = as->game_ctx.track_height;
+    int track_width = as->editor_ctx.track_width;
+    int track_height = as->editor_ctx.track_height;
     if (as->editor_ctx.map_buffer != nullptr){
         float w, h;
         SDL_GetTextureSize(as->editor_ctx.map_buffer, &w, &h);
@@ -359,7 +359,7 @@ void ViewTool::update(AppState *as, MapState& ms)
             } else {
                 ms.scale /= zoom_factor;
             }
-            ImVec2 new_track_size = ImVec2(as->game_ctx.track_width * TILE_SIZE * ms.scale, as->game_ctx.track_height * TILE_SIZE * ms.scale);
+            ImVec2 new_track_size = ImVec2(as->editor_ctx.track_width * TILE_SIZE * ms.scale, as->editor_ctx.track_height * TILE_SIZE * ms.scale);
             ms.translation.x += (relative_mouse_pos.x - (relative_mouse_pos.x * (new_track_size.x / ms.track_size.x)));
             ms.translation.y += (relative_mouse_pos.y - (relative_mouse_pos.y * (new_track_size.y / ms.track_size.y)));
         }
@@ -376,18 +376,18 @@ DrawCmd::DrawCmd(AppState* as, TileBuffer tile_buf){
     new_tiles = tile_buf;
     old_tiles = TileBuffer();
     for (auto const& [pos,tile] : new_tiles) {
-        old_tiles[pos] = as->editor_ctx.layout_buffer[pos.y*as->game_ctx.track_width + pos.x];
+        old_tiles[pos] = as->editor_ctx.layout_buffer[pos.y*as->editor_ctx.track_width + pos.x];
     }
 }
 void DrawCmd::execute(AppState* as) {
     for (auto const& [pos,tile] : new_tiles) {
-        as->editor_ctx.layout_buffer[pos.y*as->game_ctx.track_width + pos.x] = tile;
+        as->editor_ctx.layout_buffer[pos.y*as->editor_ctx.track_width + pos.x] = tile;
     }
 }
 void DrawCmd::redo(AppState* as) {
     for (auto const& [pos,tile] : new_tiles) {
         Tilemap::draw_tile(as, pos.x, pos.y, tile);
-        as->editor_ctx.layout_buffer[pos.y*as->game_ctx.track_width + pos.x] = tile;
+        as->editor_ctx.layout_buffer[pos.y*as->editor_ctx.track_width + pos.x] = tile;
     }
 }
 void DrawCmd::undo(AppState* as) {
@@ -397,7 +397,7 @@ void DrawCmd::undo(AppState* as) {
         SDL_FRect src = { (float)(TILE_SIZE*(tile%16)), (float)(TILE_SIZE*(tile/16)), TILE_SIZE, TILE_SIZE };
         SDL_FRect dest = { (float)pos.x*TILE_SIZE,(float)pos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE };
         SDL_RenderTexture(as->renderer, as->editor_ctx.tile_buffer, &src, &dest);
-        as->editor_ctx.layout_buffer[pos.y*as->game_ctx.track_width + pos.x] = tile;
+        as->editor_ctx.layout_buffer[pos.y*as->editor_ctx.track_width + pos.x] = tile;
     }
     
     SDL_SetRenderTarget(as->renderer, NULL);
