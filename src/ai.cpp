@@ -82,7 +82,7 @@ void AI::update(AppState* as){
         }
         
 
-        HandleInput(as, &as->game_ctx.tracks[as->editor_ctx.selected_track]);
+        HandleInput(as, as->game_ctx.tracks[as->editor_ctx.selected_track]);
         
         if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) {
             undo(as);
@@ -103,14 +103,14 @@ void AI::inspector(AppState* as) {
     }
     ImGui::Separator();
     if (selected_sector > -1 && selected_part != SECTOR_PART_NONE) {
-        TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
-        auto zone = t->ai_zones[selected_sector];
+        TrackContext& t = as->game_ctx.tracks[as->editor_ctx.selected_track];
+        auto zone = t.ai_zones[selected_sector];
         ImGui::Text("Sector %d:", selected_sector);
         int ishape = zone->shape;
         ImGui::Combo("Shape", &ishape, "Rectangle\0Triangle Top Left\0Triangle Top Right\0Triangle Bottom Right\0Triangle Bottom Left\0");
         zone->shape = (uint8_t)ishape;
         
-        auto target = t->ai_targets[0][selected_sector];
+        auto target = t.ai_targets[0][selected_sector];
         int ispeed = target->speed & TARGET_MASK_SPEED;
         ImGui::InputInt("Speed", &ispeed);
         target->speed = (target->speed & TARGET_MASK_FLAGS) | ((uint8_t)ispeed&TARGET_MASK_SPEED);
@@ -132,7 +132,7 @@ void AI::DrawLayout(AppState *as){
     
     dl->PushClipRect(vMin, vMax);
 
-    TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
+    TrackContext& t = as->game_ctx.tracks[as->editor_ctx.selected_track];
     AI::SectorDraw(dl, t);
 
     dl->PopClipRect();
@@ -143,15 +143,15 @@ static void SetHover(SectorPart part, SectorPart& current, int new_hov_sec, int&
         hov_sec = new_hov_sec;
     }
 }
-void AI::HandleInput(AppState*as, TrackContext* t) {
+void AI::HandleInput(AppState*as, TrackContext& t) {
     ImVec2 mouse_pos = ImGui::GetMousePos();
     hovered_sector = -1;
     hover_part = SECTOR_PART_NONE;
     // Get hovered sector and part
     if (ImGui::IsItemHovered())
-    for (int i = 0; i<t->ai_header->count; i++) {
-        auto zone = t->ai_zones[i];
-        auto target = t->ai_targets[0][i];
+    for (int i = 0; i<t.ai_header->count; i++) {
+        auto zone = t.ai_zones[i];
+        auto target = t.ai_targets[0][i];
 
         float sel_dist = SEL_DIST * state.scale;
         if (zone->shape == ZONE_SHAPE_RECTANGLE) {
@@ -219,8 +219,8 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
     
     if (dragging) {
         // Handle input when dragging
-        auto zone = t->ai_zones[drag_sector];
-        auto target = t->ai_targets[0][drag_sector];
+        auto zone = t.ai_zones[drag_sector];
+        auto target = t.ai_targets[0][drag_sector];
         hovered_sector = drag_sector;
         hover_part = drag_part;
         if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -304,8 +304,8 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
     } else {
         // Handle input on sector if not dragging
         if (hovered_sector > -1 && hover_part != SECTOR_PART_NONE) {
-            auto zone = t->ai_zones[hovered_sector];
-            auto target = t->ai_targets[0][hovered_sector];
+            auto zone = t.ai_zones[hovered_sector];
+            auto target = t.ai_targets[0][hovered_sector];
             switch (hover_part) {
                 case SECTOR_PART_ZONE:
                     {
@@ -367,10 +367,10 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
 const ImColor fill_color = ImColor(0.8f,0.1f,0.7f, 0.3f);
 const ImColor hover_color = ImColor(0.8f,0.1f,0.7f, 0.5f);
 const ImColor border_color = ImColor(0.8f,0.1f,0.7f, 1.0f);
-void AI::SectorDraw(ImDrawList* dl, TrackContext* t) {
-    for (int i = 0; i < t->ai_header->count; i++) {
-        auto zone = t->ai_zones[i];
-        auto target = t->ai_targets[0][i];
+void AI::SectorDraw(ImDrawList* dl, TrackContext& t) {
+    for (int i = 0; i < t.ai_header->count; i++) {
+        auto zone = t.ai_zones[i];
+        auto target = t.ai_targets[0][i];
         bool zone_hovered = (i==hovered_sector && hover_part == SECTOR_PART_ZONE)||(i==selected_sector && selected_part == SECTOR_PART_ZONE);
         bool target_hovered = (i==hovered_sector && hover_part == SECTOR_PART_TARGET)||(i==selected_sector && selected_part == SECTOR_PART_TARGET);
         
@@ -493,21 +493,21 @@ static void SDLCALL SaveAIDialog(void* userdata, const char* const* filelist, in
         return;
     }
     AppState* as = (AppState*)userdata;
-    TrackContext* t = &as->game_ctx.tracks[as->editor_ctx.selected_track];
-    int targets_len = sizeof(ai_target_t)*t->ai_header->count;
-    int zones_len = (sizeof(ai_zone_t)*t->ai_header->count + 3) & ~0x03;
+    TrackContext& t = as->game_ctx.tracks[as->editor_ctx.selected_track];
+    int targets_len = sizeof(ai_target_t)*t.ai_header->count;
+    int zones_len = (sizeof(ai_zone_t)*t.ai_header->count + 3) & ~0x03;
 
     std::vector<uint8_t> buffer(sizeof(ai_header_t) + zones_len + targets_len*3);
 
-    t->ai_header->targets_offset = sizeof(ai_header_t) + zones_len;
-    t->ai_header->zones_offset = sizeof(ai_header_t);
+    t.ai_header->targets_offset = sizeof(ai_header_t) + zones_len;
+    t.ai_header->zones_offset = sizeof(ai_header_t);
 
-    memcpy(buffer.data(), t->ai_header, sizeof(ai_header_t));
-    for(int i = 0; i < t->ai_header->count; i++) {
-        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_zone_t), t->ai_zones[i], sizeof(ai_zone_t));
-        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*0, t->ai_targets[0][i], sizeof(ai_target_t));
-        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*1, t->ai_targets[0][i], sizeof(ai_target_t));
-        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*2, t->ai_targets[0][i], sizeof(ai_target_t));
+    memcpy(buffer.data(), t.ai_header, sizeof(ai_header_t));
+    for(int i = 0; i < t.ai_header->count; i++) {
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_zone_t), t.ai_zones[i], sizeof(ai_zone_t));
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*0, t.ai_targets[0][i], sizeof(ai_target_t));
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*1, t.ai_targets[0][i], sizeof(ai_target_t));
+        memcpy(buffer.data()+sizeof(ai_header_t)+i*sizeof(ai_target_t) + zones_len + targets_len*2, t.ai_targets[0][i], sizeof(ai_target_t));
         
     }
     if (std::FILE* file = std::fopen(*filelist, "wb"))

@@ -480,4 +480,6 @@ static void SDLCALL OpenTilesetCallback(void* userdata, const char* const* filel
         return;
     }
     
+    AppState* as = (AppState*)userdata;
+    TrackContext& t = as->game_ctx.tracks[as->editor_ctx.selected_track];
 }

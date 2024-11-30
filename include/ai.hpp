@@ -43,8 +43,8 @@ public:
     void DrawLayout(AppState* as);
     void undo(AppState* as);
     void redo(AppState* as);
-    void HandleInput(AppState* as, TrackContext* t);
-    void SectorDraw(ImDrawList* dl, TrackContext* t);
+    void HandleInput(AppState* as, TrackContext& t);
+    void SectorDraw(ImDrawList* dl, TrackContext& t);
     void CreateSector(AppState* as);
     void BeginDrag(int sector, SectorPart part, ai_zone_t old_zone, ai_target_t old_target, ImVec2 offset);
     std::vector<uint8_t> Save(AppState* as);
