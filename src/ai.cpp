@@ -68,7 +68,7 @@ void AI::update(AppState* as){
     ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(state.track_size.x,state.track_size.y));
 
     DrawLayout(as); 
-    if (ImGui::IsWindowFocused()){
+    if (ImGui::IsWindowFocused() || inspector_focused){
         if (state.scale < 1.0f) 
             SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_LINEAR);
         else
@@ -76,8 +76,11 @@ void AI::update(AppState* as){
         // Handle Tools
         view->update(as, state);
         
-        // Claim inspector
-        as->editor_ctx.inspector = this;
+        if (ImGui::IsWindowFocused()) {
+            // Claim inspector
+            as->editor_ctx.inspector = this;
+        }
+        
 
         HandleInput(as, &as->game_ctx.tracks[as->editor_ctx.selected_track]);
         
@@ -92,6 +95,7 @@ void AI::update(AppState* as){
     ImGui::End();
 }
 void AI::inspector(AppState* as) {
+    inspector_focused = ImGui::IsWindowFocused();
     ImGui::Text("AI Inspector");
     ImGui::Separator();
     if (ImGui::Button("Create Sector")) {
@@ -144,6 +148,7 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
     hovered_sector = -1;
     hover_part = SECTOR_PART_NONE;
     // Get hovered sector and part
+    if (ImGui::IsItemHovered())
     for (int i = 0; i<t->ai_header->count; i++) {
         auto zone = t->ai_zones[i];
         auto target = t->ai_targets[0][i];
@@ -289,10 +294,11 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
                 new AiModifyCmd(as, drag_sector, old_zone, *zone, old_target, *target)
             );
             dragging = false;
-
-            if (hover_part == SECTOR_PART_TARGET || hover_part == SECTOR_PART_ZONE) {
-                selected_part = hover_part;
-                selected_sector = hovered_sector;
+            if (ImGui::IsWindowFocused()) {
+                if (hover_part == SECTOR_PART_TARGET || hover_part == SECTOR_PART_ZONE) {
+                    selected_part = hover_part;
+                    selected_sector = hovered_sector;
+                }
             }
         }
     } else {
@@ -346,7 +352,7 @@ void AI::HandleInput(AppState*as, TrackContext* t) {
         }
         
         // Reset selected zone when releasing mouse and not dragging
-        if (selected_sector > -1 && selected_part != SECTOR_PART_NONE && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        if (selected_sector > -1 && selected_part != SECTOR_PART_NONE && ImGui::IsMouseReleased(ImGuiMouseButton_Left) && ImGui::IsWindowFocused()) {
             selected_sector = -1;
             selected_part = SECTOR_PART_NONE;
         }

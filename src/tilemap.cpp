@@ -76,31 +76,34 @@ void Tilemap::update(AppState* as){
     ImGui::SetCursorScreenPos(state.cursor_pos);
     ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(state.track_size.x,state.track_size.y));
     
-    if (ImGui::IsWindowFocused()){
-        as->editor_ctx.inspector = this;
-        if (was_focused) {
-            if (state.scale < 1.0f) 
-                SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_LINEAR);
-            else
-                SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_NEAREST);
-    
-            // Handle Tool input
-            view->update(as, state);
-            active_tool->update(as, state);
-    
-            if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) {
-                undo(as);
-            }
-            if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y)) {
-                redo(as);
-            }
-        } else { was_focused = ImGui::IsWindowFocused(); }
+    if (ImGui::IsWindowFocused() || inspector_focused){
+        if (ImGui::IsWindowFocused()) {
+            // Claim inspector
+            as->editor_ctx.inspector = this;
+        }
+        
+        if (state.scale < 1.0f) 
+            SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_LINEAR);
+        else
+            SDL_SetTextureScaleMode(as->editor_ctx.map_buffer, SDL_SCALEMODE_NEAREST);
+
+        // Handle Tool input
+        view->update(as, state);
+        active_tool->update(as, state);
+
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) {
+            undo(as);
+        }
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y)) {
+            redo(as);
+        }
     } else {
 
     }
     ImGui::End();
 }
 void Tilemap::inspector(AppState* as) {
+    inspector_focused = ImGui::IsWindowFocused();
     ImGui::Text("Tilemap Inspector");
     ImGui::Separator();
     if (as->editor_ctx.selected_track < 0 || !as->editor_ctx.file_open) {

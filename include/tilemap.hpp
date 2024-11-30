@@ -35,7 +35,7 @@ private:
     std::vector<Tool*> tools;
     MapState state;
     Tool* active_tool;
-    bool was_focused;
+    bool inspector_focused;
 };
 
 static void SDLCALL OpenTilesetCallback(void* userdata, const char* const* filelist, int filter);

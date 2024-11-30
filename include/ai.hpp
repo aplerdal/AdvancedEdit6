@@ -54,6 +54,8 @@ private:
     ViewTool* view;
     MapState state;
 
+    bool inspector_focused;
+
     int hovered_sector = -1;
     SectorPart hover_part = SECTOR_PART_NONE;
     
