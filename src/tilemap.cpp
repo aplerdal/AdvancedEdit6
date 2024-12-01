@@ -16,7 +16,6 @@
 #include "tools.hpp"
 #include "graphics.hpp"
 
-
 std::string Tilemap::get_name(){
     return "Tilemap";
 }
@@ -73,6 +72,12 @@ void Tilemap::update(AppState* as){
     state.cursor_pos = ImVec2(state.win_pos.x + state.translation.x, state.win_pos.y + state.translation.y);
     state.track_size = ImVec2((as->editor_ctx.track_width*TILE_SIZE*state.scale), (as->editor_ctx.track_height*TILE_SIZE*state.scale));
     
+    if (as->editor_ctx.tile_buffer_buffer != nullptr) {
+        as->editor_ctx.tile_buffer = as->editor_ctx.tile_buffer_buffer;
+        as->editor_ctx.tile_buffer_buffer = nullptr;
+        regen_map_texture(as);
+    }
+
     ImGui::SetCursorScreenPos(state.cursor_pos);
     ImGui::Image((ImTextureID)(intptr_t)as->editor_ctx.map_buffer, ImVec2(state.track_size.x,state.track_size.y));
     
@@ -459,7 +464,6 @@ static void SDLCALL SaveTilesetCallback(void* userdata, const char* const* filel
     }
     AppState* as = (AppState*)userdata;
     SDL_SaveBMP(as->editor_ctx.tile_surface, *filelist);
-
 }
 static void SDLCALL OpenTilesetCallback(void* userdata, const char* const* filelist, int filter) {
     if (!filelist) {
@@ -482,4 +486,12 @@ static void SDLCALL OpenTilesetCallback(void* userdata, const char* const* filel
     
     AppState* as = (AppState*)userdata;
     TrackContext& t = as->game_ctx.tracks[as->editor_ctx.selected_track];
+    as->editor_ctx.tile_surface = original;
+    auto tex = SDL_CreateTextureFromSurface(as->renderer, as->editor_ctx.tile_surface);
+    if (!tex) {
+        SDL_Log("ERROR: Failed to create texture from surface for tileset: %s\n", SDL_GetError());
+    }
+    SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_NEAREST);
+    as->editor_ctx.tile_buffer_buffer = tex;
+    SDL_Log("Set tile buffer buffer");
 }

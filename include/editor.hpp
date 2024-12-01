@@ -50,13 +50,13 @@ typedef struct track {
     std::array<std::vector<ai_target_t*>,3> ai_targets;
 } TrackContext;
 
-typedef struct gameContext {
+typedef struct gameContext{
     uint8_t* eof;
     TrackTable* track_table;
     std::array<TrackContext, TRACK_COUNT> tracks;
 } GameContext;
 
-typedef struct editorContext {
+typedef struct editorContext{
     float scroll_wheel;
     SDL_AppResult app_result = SDL_APP_CONTINUE;
     int selected_track = -1;
@@ -73,12 +73,13 @@ typedef struct editorContext {
 
     SDL_Palette* palette = nullptr;
     SDL_Texture* tile_buffer = nullptr;
+    SDL_Texture* tile_buffer_buffer = nullptr;
     SDL_Surface* tile_surface = nullptr;
     SDL_Texture* map_buffer = nullptr;
     std::vector<uint8_t> layout_buffer;
 } EditorContext;
 
-typedef struct appState {
+typedef struct appState{
     SDL_Window *window;
     SDL_Renderer *renderer;
     Uint64 last_step;
