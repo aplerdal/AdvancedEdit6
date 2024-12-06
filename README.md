@@ -5,11 +5,12 @@ A work-in-progress, cross platform track/graphics editor for Mario Kart: Super C
 
 For support, ask in `#antimattur` in the [Mksc Hacking Discord](https://discord.gg/C6dNp2EvGy) or open an issue.
 
-## Features
+## Progress
 - [x] Editing Tilemaps
 - [ ] Editing Palettes
-- [ ] Editing tilesets
+- [x] Editing Tilesets
 - [x] Editing AI
+- [ ] Editing Objects
 - [ ] Saving modified game
 - [ ] Quick track testing using savestates
 - [x] Techical documentation ([Mksc RE](https://github.com/aplerdal/MkscRE))
