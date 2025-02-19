@@ -1,4 +1,6 @@
 # Advanced Edit 6
+## Development moved to https://github.com/aplerdal/AdvancedEdit/
+
 [![Build](https://github.com/aplerdal/AdvancedEdit6/actions/workflows/build-win.yml/badge.svg)](https://github.com/aplerdal/AdvancedEdit6/actions/workflows/build-win.yml)
 
 A work-in-progress, cross platform track/graphics editor for Mario Kart: Super Circuit.
